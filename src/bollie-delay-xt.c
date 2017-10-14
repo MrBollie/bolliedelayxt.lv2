@@ -1,5 +1,5 @@
 /**
-    Bollie Delay XT - (c) 2016 Thomas Ebeling https://ca9.eu
+    Bollie Delay XT - (c) 2017 Thomas Ebeling https://ca9.eu
 
     This file is part of bolliedelayxt.lv2
 
@@ -47,51 +47,41 @@ typedef enum { false, true } bool;
 * Enumeration of LV2 ports
 */
 typedef enum {
-    CP_TEMPO_MODE       = 0,
-    CP_TEMPO_HOST       = 1,    
-    CP_TEMPO_USER       = 2,    
-    CP_TEMPO_DIV_CH1    = 3,
-    CP_TEMPO_DIV_CH2    = 4,
-    CP_FB_CH1           = 5,
-    CP_FB_CH2           = 6,
-    CP_CF_CH1           = 7,
-    CP_CF_CH2           = 8,
-    CP_GAIN_IN_CH1      = 9,
-    CP_GAIN_IN_CH2      = 10,
-    CP_GAIN_DRY_CH1     = 11,
-    CP_GAIN_DRY_CH2     = 12,
-    CP_GAIN_WET_CH1     = 13,
-    CP_GAIN_WET_CH2     = 14,
-    CP_MOD_DEPTH_CH1    = 15,
-    CP_MOD_DEPTH_CH2    = 16,    
-    CP_MOD_RATE_CH1     = 17,
-    CP_MOD_RATE_CH2     = 18,   
-    CP_HPF_PRE_ON_CH1   = 19, 
-    CP_HPF_PRE_ON_CH2   = 20, 
-    CP_HPF_PRE_FREQ_CH1 = 21, 
-    CP_HPF_PRE_FREQ_CH2 = 22, 
-    CP_HPF_PRE_Q_CH1    = 23, 
-    CP_HPF_PRE_Q_CH2    = 24, 
-    CP_LPF_PRE_ON_CH1   = 25, 
-    CP_LPF_PRE_ON_CH2   = 26, 
-    CP_LPF_PRE_FREQ_CH1 = 27, 
-    CP_LPF_PRE_FREQ_CH2 = 28, 
-    CP_LPF_PRE_Q_CH1    = 29, 
-    CP_LPF_PRE_Q_CH2    = 30,   
-    CP_HPF_FB_ON_CH1    = 31, 
-    CP_HPF_FB_ON_CH2    = 32, 
-    CP_HPF_FB_FREQ_CH1  = 33, 
-    CP_HPF_FB_FREQ_CH2  = 34, 
-    CP_HPF_FB_Q_CH1     = 35, 
-    CP_HPF_FB_Q_CH2     = 36, 
-    CP_LPF_FB_ON_CH1    = 37, 
-    CP_LPF_FB_ON_CH2    = 38, 
-    CP_LPF_FB_FREQ_CH1  = 39, 
-    CP_LPF_FB_FREQ_CH2  = 40, 
-    CP_LPF_FB_Q_CH1     = 41, 
-    CP_LPF_FB_Q_CH2     = 42,    
-     
+    CP_TRAILS,
+    CP_TEMPO_MODE,
+    CP_TEMPO_HOST,    
+    CP_TEMPO_USER,    
+    CP_TEMPO_DIV_CH1,
+    CP_TEMPO_DIV_CH2,
+    CP_FB,
+    CP_CF,
+    CP_GAIN_IN,
+    CP_GAIN_DRY,
+    CP_GAIN_WET,
+    CP_MOD_DEPTH,
+    CP_MOD_RATE,
+    CP_HPF_PRE_ON,
+    CP_HPF_PRE_FREQ,
+    CP_HPF_PRE_Q,
+    CP_LPF_PRE_ON,
+    CP_LPF_PRE_FREQ,
+    CP_LPF_PRE_Q,
+    CP_HPF_FB_ON,
+    CP_HPF_FB_FREQ,
+    CP_HPF_FB_Q,
+    CP_LPF_FB_ON,
+    CP_LPF_FB_FREQ,
+    CP_LPF_FB_Q,
 } PortIdx;
+
+
+/**
+* State enum
+*/
+typedef enum {
+    FADE_IN, FADE_OUT, FADE_OUT_DONE, FILL_BUF, CYCLE
+} BollieState;
+
 
 
 /**
@@ -110,12 +100,50 @@ typedef struct {
     double sample_rate;                 ///< Store the current sample reate here
 
     float buf_delay_ch1[MAX_BUF_SIZE];  ///<< delay buffer for channel 1
-    float buf_delay_ch1[MAX_BUF_SIZE];  ///<< delay buffer for channel 2
+    float buf_delay_ch2[MAX_BUF_SIZE];  ///<< delay buffer for channel 2
     
-    float cp_t_dly_ch1;                 ///<< delay time for channel 1
-    float cp_t_dly_ch2;                 ///<< delay time for channel 2
-    
+    float *cp_trails;
+    float *cp_tempo_mode;
+    float *cp_tempo_host;
+    float *cp_tempo_user;
+    float *cp_tempo_div_ch1;
+    float *cp_tempo_div_ch2;
+    float *cp_fb;
+    float *cp_cf;
+    float *cp_gain_in;
+    float *cp_gain_dry;
+    float *cp_gain_wet;
+    float *cp_mod_depth;
+    float *cp_mod_rate;
+    float *cp_hpf_pre_on;
+    float *cp_hpf_pre_freq;
+    float *cp_hpf_pre_q;
+    float *cp_lpf_pre_on;
+    float *cp_lpf_pre_freq;
+    float *cp_lpf_pre_q;
+    float *cp_hpf_fb_on;
+    float *cp_hpf_fb_freq;
+    float *cp_hpf_fb_q;
+    float *cp_lpf_fb_on;
+    float *cp_lpf_fb_freq;
+    float *cp_lpf_fb_q;
 
+    BollieState state;
+
+    float cur_tempo;
+    float cur_tempo_div_ch1;
+    float cur_tempo_div_ch2;
+
+    float cur_d_t_ch1;
+    float cur_d_t_ch2;
+
+    int cur_d_s_ch1;
+    int cur_d_s_ch2;
+
+    int pos_w_ch1;
+    int pos_w_ch2;
+    float pos_r_ch1;
+    float pos_r_ch2;
 } BollieDelayXT;
 
 
@@ -146,6 +174,81 @@ static void connect_port(LV2_Handle instance, uint32_t port, void *data) {
     BollieDelayXT *self = (BollieDelayXT*)instance;
 
     switch ((PortIdx)port) {
+        case CP_TRAILS:
+            cp_trails = data;
+            break;
+        case CP_TEMPO_MODE:
+            cp_tempo_mode = data;
+            break;
+        case CP_TEMPO_HOST:
+            cp_tempo_host = data;
+            break;
+        case CP_TEMPO_USER:
+            cp_tempo_user = data;
+            break;
+        case CP_TEMPO_DIV_CH1:
+            cp_tempo_div_ch1 = data;
+            break;
+        case CP_TEMPO_DIV_CH2:
+            cp_tempo_div_ch2 = data;
+            break;
+        case CP_FB:
+            cp_fb = data;
+            break;
+        case CP_CF:
+            cp_cf = data;
+            break;
+        case CP_GAIN_IN:
+            cp_gain_in = data;
+            break;
+        case CP_GAIN_DRY:
+            cp_gain_dry = data;
+            break;
+        case CP_GAIN_WET:
+            cp_gain_wet = data;
+            break;
+        case CP_MOD_DEPTH:
+            cp_mod_depth = data;
+            break;
+        case CP_MOD_RATE:
+            cp_mod_rate = data;
+            break;
+        case CP_HPF_PRE_ON:
+            cp_hpf_pre_on = data;
+            break;
+        case CP_HPF_PRE_FREQ:
+            cp_hpf_pre_freq = data;
+            break;
+        case CP_HPF_PRE_Q:
+            cp_hpf_pre_q = data;
+            break;
+        case CP_LPF_PRE_ON:
+            cp_lpf_pre_on = data;
+            break;
+        case CP_LPF_PRE_FREQ:
+            cp_lpf_pre_freq = data;
+            break;
+        case CP_LPF_PRE_Q:
+            cp_lpf_pre_q = data;
+            break;
+        case CP_HPF_FB_ON:
+            cp_hpf_fb_on = data;
+            break;
+        case CP_HPF_FB_FREQ:
+            cp_hpf_fb_freq = data;
+            break;
+        case CP_HPF_FB_Q:
+            cp_hpf_fb_q = data;
+            break;
+        case CP_LPF_FB_ON:
+            cp_lpf_fb_on = data;
+            break;
+        case CP_LPF_FB_FREQ:
+            cp_lpf_fb_freq = data;
+            break;
+        case CP_LPF_FB_Q:
+            cp_lpf_fb_q = data;
+            break;
     }
 }
     
@@ -168,27 +271,27 @@ static void activate(LV2_Handle instance) {
 * \return number of samples needed for the delay buffer
 * \todo divider enum
 */
-static int calc_delay_samples(BollieDelayXT* self, float tempo, int div) {
+static float calc_delay_samples(BollieDelayXT* self, float tempo, int div) {
     // Calculate the samples needed 
-    float d = 60 / tempo * self->rate;
+    float d = 60 / tempo * self->sample_rate;
     switch(div) {
         case 1:
-        d = d * 2/3;
+            d = d * 2/3;
             break;
         case 2:
-        d = d / 2;
+            d = d / 2;
             break;
         case 3:
-        d = d / 4 * 3;
+            d = d / 4 * 3;
             break;
         case 4:
-        d = d / 3;
+            d = d / 3;
             break;
         case 5:
             d = d / 4;
             break;
     }
-    return floor(d);
+    return d;
 }
 
 
@@ -200,12 +303,165 @@ static int calc_delay_samples(BollieDelayXT* self, float tempo, int div) {
 static void run(LV2_Handle instance, uint32_t n_samples) {
     BollieDelayXT* self = (BollieDelayXT*)instance;
 
+    // Localize
+    int cur_d_s_ch1 = self->cur_d_s_ch1;
+    int cur_d_s_ch2 = self->cur_d_s_ch2;
+    float cur_d_t_ch1 = self->cur_d_t_ch1;
+    float cur_d_t_ch2 = self->cur_d_t_ch2;
+    float pos_r_ch1 = self->pos_r_ch_1;
+    float pos_r_ch2 = self->pos_r_ch_2;
+    int pos_w_ch1 = self->pos_w_ch1;
+    int pos_w_ch2 = self->pos_w_ch2;
+    BollieState state = self->state;
+    float tgt_gain_in = self->tgt_gain_in;
+    float tgt_gain_dry = self->tgt_gain_dry;
+    float tgt_gain_wet = self->tgt_gain_wet;
+    float tgt_cf = self->tgt_cf;
+    float tgt_fb = self->tgt_fb;
+
+    // Tempo handling
+    // Tempo mode has changed
+    float cur_tempo = (*self->cp_tempo_mode == 1 ? *self->cp_tempo_user :
+        *self->cp_tempo_host);
+
+    // Tempo has changed
+    if (cur_tempo != self->cur_tempo 
+        || self->cur_tempo_div_ch1 != *self->cp_tempo_div_ch1
+        || self->cur_tempo_div_ch2 != *self->cp_tempo_div_ch2
+    ) {
+        // Fade out
+        if (state == FADE_OUT_DONE) {
+            // Memorize current settings
+            self->cur_tempo = cur_tempo;
+            self->cur_tempo_div_ch1 = *self->cp_tempo_div_ch1;
+            self->cur_tempo_div_ch2 = *self->cp_tempo_div_ch2;
+
+            // Calculate sample offset and memorize it
+            cur_d_t_ch1 = calc_delay_samples(self, cur_tempo, 
+                self->cur_tempo_div_ch1);
+            cur_d_t_ch2 = calc_delay_samples(self, cur_tempo, 
+                self->cur_tempo_div_ch2);
+
+            // Safety!
+            if (cur_d_t_ch1 + 1.f > MAX_BUF_SIZE) 
+                cur_d_t_ch1 = MAX_BUF_SIZE-1.f;
+
+            if (cur_d_t_ch2 + 1.f > MAX_BUF_SIZE)
+                cur_d_t_ch2 = MAX_BUF_SIZE-1.f;
+
+            // The buffer is integer, so make sure, it is big enough.
+            cur_d_s_ch1 = ceil(cur_d_t_ch1) + 1;
+            cur_d_s_ch2 = ceil(cur_d_t_ch2) + 1;
+
+            pos_r_ch1 = 0;
+            pos_r_ch2 = 0;
+            pos_w_ch1 = 0;
+            pos_w_ch2 = 0;
+
+            *self->cp_tempo_out = cur_tempo;
+            state = FILL_BUF;
+        }
+        else if (state != FADE_OUT) {
+            state = FADE_OUT;
+        }
+    }
+
+    // Gain handling
+    if (*self->cp_gain_in != self->cur_cp_gain_in) {
+        if (*self->cp_gain_in > 12.f) {
+            tgt_gain_in = 4.f;
+        }
+        else if (*self->cp_gain_in < 96.f) {
+            tgt_gain_in = 0;
+        }
+        else {
+            tgt_gain_in = powf(10, (*self->cp_gain_in/20));
+        }
+        self->cur_cp_gain_in = *self->cp_gain_in;
+    } 
+    
+    if (*self->cp_gain_dry != self->cur_cp_gain_dry) {
+        if (*self->cp_gain_dry > 12.f) {
+            tgt_gain_dry = 4.f;
+        }
+        else if (*self->cp_gain_dry < 96.f) {
+            tgt_gain_dry = 0;
+        }
+        else {
+            tgt_gain_dry = powf(10, (*self->cp_gain_dry/20));
+        }
+        self->cur_cp_gain_dry = *self->cp_gain_dry;
+    } 
+    
+    if (*self->cp_gain_wet != self->cur_cp_gain_wet) {
+        if (*self->cp_gain_wet > 12.f) {
+            tgt_gain_wet = 4.f;
+        }
+        else if (*self->cp_gain_wet < 96.f) {
+            tgt_gain_wet = 0;
+        }
+        else {
+            tgt_gain_wet = powf(10, (*self->cp_gain_wet/20));
+        }
+        self->cur_cp_gain_wet = *self->cp_gain_wet;
+    } 
+    
+    // Feedback
+    if (*self->cp_fb != self->cur_cp_fb) {
+        if (*self->cp_fb > 12.f) {
+            tgt_fb = 4.f;
+        }
+        else if (*self->cp_fb < 96.f) {
+            tgt_fb = 0;
+        }
+        else {
+            tgt_fb = powf(10, (*self->cp_fb/20));
+        }
+        self->cur_cp_fb = *self->cp_fb;
+    } 
+    
+    // Crossfeed
+    if (*self->cp_cf != self->cur_cp_cf) {
+        if (*self->cp_cf > 12.f) {
+            tgt_cf = 4.f;
+        }
+        else if (*self->cp_cf < 96.f) {
+            tgt_cf = 0;
+        }
+        else {
+            tgt_cf = powf(10, (*self->cp_cf/20));
+        }
+        self->cur_cp_cf = *self->cp_cf;
+    } 
+    
+
 
     // Loop over the block of audio we got
     for (unsigned int i = 0 ; i < n_samples ; ++i) {
 
+        // Current samples
+        float cur_s_ch1 = self->input_ch1[i];
+        float cur_s_ch2 = self->input_ch1[2];
+
+        // Store old samples here
+        float old_s_ch1 = 0;
+        float old_s_ch2 = 0;
     }
 
+    self->cur_d_s_ch1 = cur_d_s_ch_1;
+    self->cur_d_s_ch2 = cur_d_s_ch_2;
+    self->cur_d_t_ch1 = cur_d_t_ch_1;
+    self->cur_d_t_ch2 = cur_d_t_ch_2;
+    self->pos_r_ch1 = pos_r_ch1;
+    self->pos_r_ch2 = pos_r_ch2;
+    self->pos_w_ch1 = pos_w_ch1;
+    self->pos_w_ch2 = pos_w_ch2;
+    self->state = state;
+    self->tgt_gain_in = tgt_gain_in;
+    self->tgt_gain_dry = tgt_gain_dry;
+    self->tgt_gain_wet = tgt_gain_wet;
+    self->tgt_cf = tgt_cf;
+    self->tgt_fb = tgt_fb;
 }
 
 
