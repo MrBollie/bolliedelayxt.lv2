@@ -22,10 +22,73 @@
     doap:name "Bollie Delay";
     lv2:optionalFeature lv2:hardRTCapable ;
     lv2:port [
+        a lv2:AudioPort ,
+            lv2:InputPort ;
+        lv2:index 0 ;
+        lv2:symbol "IP_INPUT_CH1" ;
+        lv2:name "In Ch. 1"
+    ] , [
+        a lv2:AudioPort ,
+            lv2:InputPort ;
+        lv2:index 1 ;
+        lv2:symbol "IP_INPUT_CH2" ;
+        lv2:name "In Ch. 2"
+    ] , [
+        a lv2:AudioPort ,
+            lv2:OutputPort ;
+        lv2:index 2 ;
+        lv2:symbol "OP_OUTPUT_CH1" ;
+        lv2:name "Out Ch. 1"
+    ] , [
+        a lv2:AudioPort ,
+            lv2:OutputPort ;
+        lv2:index 3 ;
+        lv2:symbol "OP_OUTPUT_CH2" ;
+        lv2:name "Out Ch. 2"
+    ] , [
         a lv2:InputPort ,
             lv2:ControlPort ;
-        lv2:index 0 ;
-        lv2:symbol "tempo_host" ;
+        lv2:index 4 ;
+        lv2:symbol "CP_ENABLED" ;
+        lv2:name "Enabled" ;
+        lv2:default 0 ;
+        lv2:minimum 0 ;
+        lv2:maximum 1;
+        lv2:portProperty lv2:integer, lv2:toggled;
+    ] , [
+        a lv2:InputPort ,
+            lv2:ControlPort ;
+        lv2:index 5 ;
+        lv2:symbol "CP_TRAILS" ;
+        lv2:name "Trails" ;
+        lv2:default 0 ;
+        lv2:minimum 0 ;
+        lv2:maximum 1;
+        lv2:portProperty lv2:integer, lv2:toggled;
+    ] , [
+        a lv2:InputPort ,
+            lv2:ControlPort ;
+        lv2:index 6 ;
+        lv2:symbol "CP_TEMPO_MODE" ;
+        lv2:name "Tempo Mode" ;
+        lv2:default 0 ;
+        lv2:minimum 0 ;
+        lv2:maximum 1 ;
+        lv2:portProperty lv2:enumeration, lv2:integer;
+        lv2:scalePoint [
+            rdf:value 0 ;
+            rdfs:label "MOD/Host" ;
+            rdfs:comment "Tempo set by MOD/Host" ;
+        ], [
+            rdf:value 1 ;
+            rdfs:label "User" ;
+            rdfs:comment "Tempo set by user" ;
+        ];
+    ] , [
+        a lv2:InputPort ,
+            lv2:ControlPort ;
+        lv2:index 7 ;
+        lv2:symbol "CP_TEMPO_HOST" ;
         lv2:name "Host/MOD-Tempo";
         lv2:default 120 ;
         lv2:minimum 6 ;
@@ -36,8 +99,8 @@
     ] , [
         a lv2:InputPort ,
             lv2:ControlPort ;
-        lv2:index 1 ;
-        lv2:symbol "tempo_user" ;
+        lv2:index 8 ;
+        lv2:symbol "CP_TEMPO_USER" ;
         lv2:name "User-Tempo";
         lv2:default 120 ;
         lv2:minimum 6 ;
@@ -46,131 +109,9 @@
     ] , [
         a lv2:InputPort ,
             lv2:ControlPort ;
-        lv2:index 2 ;
-        lv2:symbol "tempo_mode" ;
-        lv2:name "Tempo Mode" ;
-        lv2:default 0 ;
-        lv2:minimum 0 ;
-        lv2:maximum 2 ;
-        lv2:portProperty lv2:enumeration, lv2:integer;
-        lv2:scalePoint [
-            rdf:value 0 ;
-            rdfs:label "MOD/Host" ;
-            rdfs:comment "Tempo set by MOD/Host" ;
-        ], [
-            rdf:value 1 ;
-            rdfs:label "User" ;
-            rdfs:comment "Tempo set by user" ;
-        ], [
-            rdf:value 2 ;
-            rdfs:label "Tap" ;
-            rdfs:comment "Tempo via tap button" ;
-        ];
-    ] , [
-        a lv2:InputPort ,
-            lv2:ControlPort ;
-        lv2:index 3 ;
-        lv2:symbol "tap" ;
-        lv2:name "Tap" ;
-        lv2:default 0 ;
-        lv2:minimum 0 ;
-        lv2:maximum 1;
-        lv2:portProperty lv2:integer, lv2:toggled, pprop:trigger;
-    ] , [
-        a lv2:InputPort ,
-            lv2:ControlPort ;
-        lv2:index 4 ;
-        lv2:symbol "mix" ;
-        lv2:name "Blend" ;
-        lv2:default 30.000 ;
-        lv2:minimum 0.000 ;
-        lv2:maximum 100.000 ;
-    ] , [
-        a lv2:InputPort ,
-            lv2:ControlPort ;
-        lv2:index 5 ;
-        lv2:symbol "feedback" ;
-        lv2:name "Feedback" ;
-        lv2:default 40.000 ;
-        lv2:minimum 0.000 ;
-        lv2:maximum 100.000 ;
-    ] , [
-        a lv2:InputPort ,
-            lv2:ControlPort ;
-        lv2:index 6 ;
-        lv2:symbol "crossf" ;
-        lv2:name "Crossfeed" ;
-        lv2:default 20.000 ;
-        lv2:minimum 0.000 ;
-        lv2:maximum 100.000 ;
-    ] , [
-        a lv2:InputPort ,
-            lv2:ControlPort ;
-        lv2:index 7 ;
-        lv2:symbol "low_on" ;
-        lv2:name "Low on" ;
-        lv2:default 0 ;
-        lv2:minimum 0 ;
-        lv2:maximum 1;
-        lv2:portProperty lv2:integer, lv2:toggled;
-    ] , [
-        a lv2:InputPort ,
-            lv2:ControlPort ;
-        lv2:index 8 ;
-        lv2:symbol "low_f" ;
-        lv2:name "Low Cut Freq." ;
-        lv2:default 20.000 ;
-        lv2:minimum 20.000 ;
-        lv2:maximum 2000.000 ;
-        lv2:portProperty pprop:logarithmic ;
-        units:unit units:hz ;
-    ] , [
-        a lv2:InputPort ,
-            lv2:ControlPort ;
         lv2:index 9 ;
-        lv2:symbol "low_q" ;
-        lv2:name "Low Q." ;
-        lv2:default 1.0 ;
-        lv2:minimum 0.125 ;
-        lv2:maximum 8.0 ;
-        lv2:portProperty pprop:logarithmic ;
-    ] , [
-        a lv2:InputPort ,
-            lv2:ControlPort ;
-        lv2:index 10 ;
-        lv2:symbol "high_on" ;
-        lv2:name "High on" ;
-        lv2:default 0 ;
-        lv2:minimum 0 ;
-        lv2:maximum 1;
-        lv2:portProperty lv2:integer, lv2:toggled;
-    ] , [
-        a lv2:InputPort ,
-            lv2:ControlPort ;
-        lv2:index 11 ;
-        lv2:symbol "high_f" ;
-        lv2:name "High Cut Freq." ;
-        lv2:default 7500.0 ;
-        lv2:minimum 200.0 ;
-        lv2:maximum 22000.0 ;
-        lv2:portProperty pprop:logarithmic ;
-        units:unit units:hz ;
-    ] , [
-        a lv2:InputPort ,
-            lv2:ControlPort ;
-        lv2:index 12 ;
-        lv2:symbol "high_q" ;
-        lv2:name "High Q." ;
-        lv2:default 1.0 ;
-        lv2:minimum 0.125 ;
-        lv2:maximum 8.0 ;
-        lv2:portProperty pprop:logarithmic ;
-    ] , [
-        a lv2:InputPort ,
-            lv2:ControlPort ;
-        lv2:index 13 ;
-        lv2:symbol "div_l" ;
-        lv2:name "Div. L" ;
+        lv2:symbol "CP_TEMPO_DIV_CH1" ;
+        lv2:name "Div. Ch. 1" ;
         lv2:default 0 ;
         lv2:minimum 0 ;
         lv2:maximum 5 ;
@@ -203,9 +144,9 @@
     ] , [
         a lv2:InputPort ,
             lv2:ControlPort ;
-        lv2:index 14 ;
-        lv2:symbol "div_r" ;
-        lv2:name "Div. R" ;
+        lv2:index 10 ;
+        lv2:symbol "CP_TEMPO_DIV_CH2" ;
+        lv2:name "Div. Ch. 2" ;
         lv2:default 0 ;
         lv2:minimum 0 ;
         lv2:maximum 5 ;
@@ -236,33 +177,214 @@
             rdfs:comment "Sixteenth notes." ;
         ];
     ] , [
-        a lv2:AudioPort ,
-            lv2:InputPort ;
+        a lv2:InputPort ,
+            lv2:ControlPort ;
+        lv2:index 11 ;
+        lv2:symbol "CP_FB" ;
+        lv2:name "Feedback" ;
+        lv2:default -12.0 ;
+        lv2:minimum -97.0 ;
+        lv2:maximum -1.0 ;
+        units:unit units:db ;
+    ] , [
+        a lv2:InputPort ,
+            lv2:ControlPort ;
+        lv2:index 12 ;
+        lv2:symbol "CP_CF" ;
+        lv2:name "Crossfeed" ;
+        lv2:default -12.0 ;
+        lv2:minimum -97.0 ;
+        lv2:maximum -1.0 ;
+        units:unit units:db ;
+    ] , [
+        a lv2:InputPort ,
+            lv2:ControlPort ;
+        lv2:index 13 ;
+        lv2:symbol "CP_GAIN_IN" ;
+        lv2:name "Input Gain" ;
+        lv2:default 0.0 ;
+        lv2:minimum -97.0 ;
+        lv2:maximum 12.0 ;
+        units:unit units:db ;
+    ] , [
+        a lv2:InputPort ,
+            lv2:ControlPort ;
+        lv2:index 14 ;
+        lv2:symbol "CP_GAIN_DRY" ;
+        lv2:name "Dry Gain" ;
+        lv2:default 0.0 ;
+        lv2:minimum -97.0 ;
+        lv2:maximum 12.0 ;
+        units:unit units:db ;
+    ] , [
+        a lv2:InputPort ,
+            lv2:ControlPort ;
         lv2:index 15 ;
-        lv2:symbol "in_l" ;
-        lv2:name "In L"
+        lv2:symbol "CP_GAIN_WET" ;
+        lv2:name "Wet Gain" ;
+        lv2:default -12.0 ;
+        lv2:minimum -97.0 ;
+        lv2:maximum 12.0 ;
+        units:unit units:db ;
     ] , [
-        a lv2:AudioPort ,
-            lv2:InputPort ;
+        a lv2:InputPort ,
+            lv2:ControlPort ;
         lv2:index 16 ;
-        lv2:symbol "in_r" ;
-        lv2:name "In R"
+        lv2:symbol "CP_MOD_ON" ;
+        lv2:name "Modulation on" ;
+        lv2:default 0 ;
+        lv2:minimum 0 ;
+        lv2:maximum 1;
+        lv2:portProperty lv2:integer, lv2:toggled;
     ] , [
-        a lv2:AudioPort ,
-            lv2:OutputPort ;
+        a lv2:InputPort ,
+            lv2:ControlPort ;
         lv2:index 17 ;
-        lv2:symbol "out_l" ;
-        lv2:name "Out L"
+        lv2:symbol "CP_MOD_DEPTH" ;
+        lv2:name "Mod. Depth" ;
+        lv2:default 2.0 ;
+        lv2:minimum 0.1 ;
+        lv2:maximum 5.0 ;
+        units:unit units:ms ;
     ] , [
-        a lv2:AudioPort ,
-            lv2:OutputPort ;
+        a lv2:InputPort ,
+            lv2:ControlPort ;
         lv2:index 18 ;
-        lv2:symbol "out_r" ;
-        lv2:name "Out R"
+        lv2:symbol "CP_MOD_RATE" ;
+        lv2:name "Mod. Rate" ;
+        lv2:default 0.1 ;
+        lv2:minimum 0.1 ;
+        lv2:maximum 3.0 ;
+        lv2:portProperty pprop:logarithmic ;
+        units:unit units:hz ;
+    ] , [
+        a lv2:InputPort ,
+            lv2:ControlPort ;
+        lv2:index 19 ;
+        lv2:symbol "CP_HCF_PRE_ON" ;
+        lv2:name "High Cut Pre On" ;
+        lv2:default 0 ;
+        lv2:minimum 0 ;
+        lv2:maximum 1;
+        lv2:portProperty lv2:integer, lv2:toggled;
+    ] , [
+        a lv2:InputPort ,
+            lv2:ControlPort ;
+        lv2:index 20 ;
+        lv2:symbol "CP_HCF_PRE_FREQ" ;
+        lv2:name "High Cut Pre Freq." ;
+        lv2:default 7500.0 ;
+        lv2:minimum 200.0 ;
+        lv2:maximum 22000.0 ;
+        lv2:portProperty pprop:logarithmic ;
+        units:unit units:hz ;
+    ] , [
+        a lv2:InputPort ,
+            lv2:ControlPort ;
+        lv2:index 21 ;
+        lv2:symbol "CP_HCF_PRE_Q" ;
+        lv2:name "High Cut Pre Q." ;
+        lv2:default 1.0 ;
+        lv2:minimum 0.125 ;
+        lv2:maximum 8.0 ;
+        lv2:portProperty pprop:logarithmic ;
+    ] , [
+        a lv2:InputPort ,
+            lv2:ControlPort ;
+        lv2:index 22 ;
+        lv2:symbol "CP_LCF_PRE_ON" ;
+        lv2:name "Low Cut Pre On" ;
+        lv2:default 0 ;
+        lv2:minimum 0 ;
+        lv2:maximum 1;
+        lv2:portProperty lv2:integer, lv2:toggled;
+    ] , [
+        a lv2:InputPort ,
+            lv2:ControlPort ;
+        lv2:index 23 ;
+        lv2:symbol "CP_LCF_PRE_FREQ" ;
+        lv2:name "Low Cut Pre Freq." ;
+        lv2:default 20.000 ;
+        lv2:minimum 20.000 ;
+        lv2:maximum 2000.000 ;
+        lv2:portProperty pprop:logarithmic ;
+        units:unit units:hz ;
+    ] , [
+        a lv2:InputPort ,
+            lv2:ControlPort ;
+        lv2:index 24 ;
+        lv2:symbol "CP_LCF_PRE_Q" ;
+        lv2:name "Low Cut Pre Q." ;
+        lv2:default 1.0 ;
+        lv2:minimum 0.125 ;
+        lv2:maximum 8.0 ;
+        lv2:portProperty pprop:logarithmic ;
+    ] , [
+        a lv2:InputPort ,
+            lv2:ControlPort ;
+        lv2:index 25 ;
+        lv2:symbol "CP_HCF_FB_ON" ;
+        lv2:name "High Cut Feedback On" ;
+        lv2:default 0 ;
+        lv2:minimum 0 ;
+        lv2:maximum 1;
+        lv2:portProperty lv2:integer, lv2:toggled;
+    ] , [
+        a lv2:InputPort ,
+            lv2:ControlPort ;
+        lv2:index 26 ;
+        lv2:symbol "CP_HCF_FB_FREQ" ;
+        lv2:name "High Cut Feedback Freq." ;
+        lv2:default 7500.0 ;
+        lv2:minimum 200.0 ;
+        lv2:maximum 22000.0 ;
+        lv2:portProperty pprop:logarithmic ;
+        units:unit units:hz ;
+    ] , [
+        a lv2:InputPort ,
+            lv2:ControlPort ;
+        lv2:index 27 ;
+        lv2:symbol "CP_HCF_FB_Q" ;
+        lv2:name "High Cut Feedback Q." ;
+        lv2:default 1.0 ;
+        lv2:minimum 0.125 ;
+        lv2:maximum 8.0 ;
+        lv2:portProperty pprop:logarithmic ;
+    ] , [
+        a lv2:InputPort ,
+            lv2:ControlPort ;
+        lv2:index 28 ;
+        lv2:symbol "CP_LCF_FB_ON" ;
+        lv2:name "Low Cut Feedback On" ;
+        lv2:default 0 ;
+        lv2:minimum 0 ;
+        lv2:maximum 1;
+        lv2:portProperty lv2:integer, lv2:toggled;
+    ] , [
+        a lv2:InputPort ,
+            lv2:ControlPort ;
+        lv2:index 29 ;
+        lv2:symbol "CP_LCF_FB_FREQ" ;
+        lv2:name "Low Cut Feedback Freq." ;
+        lv2:default 20.000 ;
+        lv2:minimum 20.000 ;
+        lv2:maximum 2000.000 ;
+        lv2:portProperty pprop:logarithmic ;
+        units:unit units:hz ;
+    ] , [
+        a lv2:InputPort ,
+            lv2:ControlPort ;
+        lv2:index 30 ;
+        lv2:symbol "CP_LCF_FB_Q" ;
+        lv2:name "Low Cut Feedback Q." ;
+        lv2:default 1.0 ;
+        lv2:minimum 0.125 ;
+        lv2:maximum 8.0 ;
+        lv2:portProperty pprop:logarithmic ;
     ] , [
         a lv2:OutputPort ,
             lv2:ControlPort ;
-        lv2:index 19 ;
+        lv2:index 31 ;
         lv2:symbol "tempo_out" ;
         lv2:name "Current tempo" ;
         lv2:default 120 ;
