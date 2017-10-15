@@ -34,7 +34,9 @@
 #define URI "https://ca9.eu/lv2/bolliedelayxt"
 
 // Max buffer size == 192k * 10 seconds (max delay time) + a bit for modulation
-#define MAX_BUF_SIZE 2304000
+#define MAX_BUF_SIZE 1930000
+
+#define FADE_LENGTH_MS 50
 
 
 /**
@@ -47,6 +49,11 @@ typedef enum { false, true } bool;
 * Enumeration of LV2 ports
 */
 typedef enum {
+    IP_INPUT_CH1,
+    IP_INPUT_CH2,
+    OP_OUTPUT_CH1,
+    OP_OUTPUT_CH2,
+    CP_ENABLED,
     CP_TRAILS,
     CP_TEMPO_MODE,
     CP_TEMPO_HOST,    
@@ -60,18 +67,19 @@ typedef enum {
     CP_GAIN_WET,
     CP_MOD_DEPTH,
     CP_MOD_RATE,
-    CP_HPF_PRE_ON,
-    CP_HPF_PRE_FREQ,
-    CP_HPF_PRE_Q,
-    CP_LPF_PRE_ON,
-    CP_LPF_PRE_FREQ,
-    CP_LPF_PRE_Q,
-    CP_HPF_FB_ON,
-    CP_HPF_FB_FREQ,
-    CP_HPF_FB_Q,
-    CP_LPF_FB_ON,
-    CP_LPF_FB_FREQ,
-    CP_LPF_FB_Q,
+    CP_HCF_PRE_ON,
+    CP_HCF_PRE_FREQ,
+    CP_HCF_PRE_Q,
+    CP_LCF_PRE_ON,
+    CP_LCF_PRE_FREQ,
+    CP_LCF_PRE_Q,
+    CP_HCF_FB_ON,
+    CP_HCF_FB_FREQ,
+    CP_HCF_FB_Q,
+    CP_LCF_FB_ON,
+    CP_LCF_FB_FREQ,
+    CP_LCF_FB_Q,
+    CP_TEMPO_OUT
 } PortIdx;
 
 
@@ -99,36 +107,67 @@ typedef struct {
 typedef struct {
     double sample_rate;                 ///< Store the current sample reate here
 
-    float buf_delay_ch1[MAX_BUF_SIZE];  ///<< delay buffer for channel 1
-    float buf_delay_ch2[MAX_BUF_SIZE];  ///<< delay buffer for channel 2
+    float buffer_ch1[MAX_BUF_SIZE];  ///<< delay buffer for channel 1
+    float buffer_ch2[MAX_BUF_SIZE];  ///<< delay buffer for channel 2
     
-    float *cp_trails;
-    float *cp_tempo_mode;
-    float *cp_tempo_host;
-    float *cp_tempo_user;
-    float *cp_tempo_div_ch1;
-    float *cp_tempo_div_ch2;
-    float *cp_fb;
-    float *cp_cf;
-    float *cp_gain_in;
-    float *cp_gain_dry;
-    float *cp_gain_wet;
-    float *cp_mod_depth;
-    float *cp_mod_rate;
-    float *cp_hpf_pre_on;
-    float *cp_hpf_pre_freq;
-    float *cp_hpf_pre_q;
-    float *cp_lpf_pre_on;
-    float *cp_lpf_pre_freq;
-    float *cp_lpf_pre_q;
-    float *cp_hpf_fb_on;
-    float *cp_hpf_fb_freq;
-    float *cp_hpf_fb_q;
-    float *cp_lpf_fb_on;
-    float *cp_lpf_fb_freq;
-    float *cp_lpf_fb_q;
+    const float *cp_enabled;
+    const float *cp_trails;
+    const float *cp_tempo_mode;
+    const float *cp_tempo_host;
+    const float *cp_tempo_user;
+    const float *cp_tempo_div_ch1;
+    const float *cp_tempo_div_ch2;
+    const float *cp_fb;
+    const float *cp_cf;
+    const float *cp_gain_in;
+    const float *cp_gain_dry;
+    const float *cp_gain_wet;
+    const float *cp_mod_depth;
+    const float *cp_mod_rate;
+    const float *cp_hcf_pre_on;
+    const float *cp_hcf_pre_freq;
+    const float *cp_hcf_pre_q;
+    const float *cp_lcf_pre_on;
+    const float *cp_lcf_pre_freq;
+    const float *cp_lcf_pre_q;
+    const float *cp_hcf_fb_on;
+    const float *cp_hcf_fb_freq;
+    const float *cp_hcf_fb_q;
+    const float *cp_lcf_fb_on;
+    const float *cp_lcf_fb_freq;
+    const float *cp_lcf_fb_q;
+    float *cp_tempo_out;
+
+    BollieFilter fil_hcf_fb_ch1;
+    BollieFilter fil_hcf_fb_ch2;
+    BollieFilter fil_lcf_fb_ch1;
+    BollieFilter fil_lcf_fb_ch2;
+    BollieFilter fil_hcf_pre_ch1;
+    BollieFilter fil_hcf_pre_ch2;
+    BollieFilter fil_lcf_pre_ch1;
+    BollieFilter fil_lcf_pre_ch2;
+
+    const float *input_ch1;
+    const float *input_ch2;
+
+    float *output_ch1;
+    float *output_ch2;
 
     BollieState state;
+
+    float cur_cf;
+    float cur_fb;
+
+    float cur_cp_gain_dry;
+    float cur_cp_gain_in;
+    float cur_cp_gain_wet;
+
+    float cur_cp_cf;
+    float cur_cp_fb;
+
+    float cur_gain_dry;
+    float cur_gain_in;
+    float cur_gain_wet;
 
     float cur_tempo;
     float cur_tempo_div_ch1;
@@ -140,10 +179,20 @@ typedef struct {
     int cur_d_s_ch1;
     int cur_d_s_ch2;
 
-    int pos_w_ch1;
-    int pos_w_ch2;
-    float pos_r_ch1;
-    float pos_r_ch2;
+    float lfo_x;
+
+    int fade_length;
+    int fade_pos;
+
+    int pos_w;
+
+    float tgt_cf;
+    float tgt_fb;
+
+    float tgt_gain_dry;
+    float tgt_gain_in;
+    float tgt_gain_wet;
+    
 } BollieDelayXT;
 
 
@@ -160,6 +209,9 @@ static LV2_Handle instantiate(const LV2_Descriptor * descriptor, double rate,
     // Memorize sample rate for calculation
     self->sample_rate = rate;
 
+    // Prepare fade stuff
+    self->fade_length = ceil(rate / 1000 * FADE_LENGTH_MS);
+    self->fade_pos = 0;
     return (LV2_Handle)self;
 }
 
@@ -174,80 +226,98 @@ static void connect_port(LV2_Handle instance, uint32_t port, void *data) {
     BollieDelayXT *self = (BollieDelayXT*)instance;
 
     switch ((PortIdx)port) {
+        case IP_INPUT_CH1:
+            self->input_ch1 = data;
+            break;
+        case IP_INPUT_CH2:
+            self->input_ch2 = data;
+            break;
+        case OP_OUTPUT_CH1:
+            self->output_ch1 = data;
+            break;
+        case OP_OUTPUT_CH2:
+            self->output_ch2 = data;
+            break;
+        case CP_ENABLED:
+            self->cp_enabled = data;
+            break;
         case CP_TRAILS:
-            cp_trails = data;
+            self->cp_trails = data;
             break;
         case CP_TEMPO_MODE:
-            cp_tempo_mode = data;
+            self->cp_tempo_mode = data;
             break;
         case CP_TEMPO_HOST:
-            cp_tempo_host = data;
+            self->cp_tempo_host = data;
             break;
         case CP_TEMPO_USER:
-            cp_tempo_user = data;
+            self->cp_tempo_user = data;
             break;
         case CP_TEMPO_DIV_CH1:
-            cp_tempo_div_ch1 = data;
+            self->cp_tempo_div_ch1 = data;
             break;
         case CP_TEMPO_DIV_CH2:
-            cp_tempo_div_ch2 = data;
+            self->cp_tempo_div_ch2 = data;
             break;
         case CP_FB:
-            cp_fb = data;
+            self->cp_fb = data;
             break;
         case CP_CF:
-            cp_cf = data;
+            self->cp_cf = data;
             break;
         case CP_GAIN_IN:
-            cp_gain_in = data;
+            self->cp_gain_in = data;
             break;
         case CP_GAIN_DRY:
-            cp_gain_dry = data;
+            self->cp_gain_dry = data;
             break;
         case CP_GAIN_WET:
-            cp_gain_wet = data;
+            self->cp_gain_wet = data;
             break;
         case CP_MOD_DEPTH:
-            cp_mod_depth = data;
+            self->cp_mod_depth = data;
             break;
         case CP_MOD_RATE:
-            cp_mod_rate = data;
+            self->cp_mod_rate = data;
             break;
-        case CP_HPF_PRE_ON:
-            cp_hpf_pre_on = data;
+        case CP_HCF_PRE_ON:
+            self->cp_hcf_pre_on = data;
             break;
-        case CP_HPF_PRE_FREQ:
-            cp_hpf_pre_freq = data;
+        case CP_HCF_PRE_FREQ:
+            self->cp_hcf_pre_freq = data;
             break;
-        case CP_HPF_PRE_Q:
-            cp_hpf_pre_q = data;
+        case CP_HCF_PRE_Q:
+            self->cp_hcf_pre_q = data;
             break;
-        case CP_LPF_PRE_ON:
-            cp_lpf_pre_on = data;
+        case CP_LCF_PRE_ON:
+            self->cp_lcf_pre_on = data;
             break;
-        case CP_LPF_PRE_FREQ:
-            cp_lpf_pre_freq = data;
+        case CP_LCF_PRE_FREQ:
+            self->cp_lcf_pre_freq = data;
             break;
-        case CP_LPF_PRE_Q:
-            cp_lpf_pre_q = data;
+        case CP_LCF_PRE_Q:
+            self->cp_lcf_pre_q = data;
             break;
-        case CP_HPF_FB_ON:
-            cp_hpf_fb_on = data;
+        case CP_HCF_FB_ON:
+            self->cp_hcf_fb_on = data;
             break;
-        case CP_HPF_FB_FREQ:
-            cp_hpf_fb_freq = data;
+        case CP_HCF_FB_FREQ:
+            self->cp_hcf_fb_freq = data;
             break;
-        case CP_HPF_FB_Q:
-            cp_hpf_fb_q = data;
+        case CP_HCF_FB_Q:
+            self->cp_hcf_fb_q = data;
             break;
-        case CP_LPF_FB_ON:
-            cp_lpf_fb_on = data;
+        case CP_LCF_FB_ON:
+            self->cp_lcf_fb_on = data;
             break;
-        case CP_LPF_FB_FREQ:
-            cp_lpf_fb_freq = data;
+        case CP_LCF_FB_FREQ:
+            self->cp_lcf_fb_freq = data;
             break;
-        case CP_LPF_FB_Q:
-            cp_lpf_fb_q = data;
+        case CP_LCF_FB_Q:
+            self->cp_lcf_fb_q = data;
+            break;
+        case CP_TEMPO_OUT:
+            self->cp_tempo_out = data;
             break;
     }
 }
@@ -259,7 +329,20 @@ static void connect_port(LV2_Handle instance, uint32_t port, void *data) {
 */
 static void activate(LV2_Handle instance) {
     BollieDelayXT* self = (BollieDelayXT*)instance;
-
+    self->state = FILL_BUF;
+    self->pos_w = 0;
+    self->fade_pos = 0;
+    self->cur_cp_gain_in = 0;
+    self->cur_cp_gain_dry = 0;
+    self->cur_cp_gain_wet = 0;
+    self->cur_cp_cf = 0;
+    self->cur_cp_fb = 0;
+    self->cur_gain_in = 0;
+    self->cur_gain_dry = 0;
+    self->cur_gain_wet = 0;
+    self->cur_cf = 0;
+    self->cur_fb = 0;
+    self->cur_tempo = 0;
 }
 
 
@@ -294,6 +377,25 @@ static float calc_delay_samples(BollieDelayXT* self, float tempo, int div) {
     return d;
 }
 
+/**
+* linear sample interpolation from buffer
+* \param buf pointer to the buffer
+* \param pos position to retrieve
+* \return interpolated sample
+*/
+static float interpolate(float *buf, float pos) {
+    double x1, frac;
+    frac = modf(pos, &x1);
+    if (frac == 0) {
+        return buf[(int)x1];
+    }
+    
+    float a1 = buf[(int)x1];
+    int x2 = (int)x1+1;
+    float a2 = buf[x2 >= MAX_BUF_SIZE ? 0 : x2];
+    return a1 + (a2-a1)/(x2-x1) * (pos-x1);
+}
+
 
 /**
 * Main process function of the plugin.
@@ -306,12 +408,33 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
     // Localize
     int cur_d_s_ch1 = self->cur_d_s_ch1;
     int cur_d_s_ch2 = self->cur_d_s_ch2;
+    float cur_cf = self->cur_cf;
+    float cur_fb = self->cur_fb;
     float cur_d_t_ch1 = self->cur_d_t_ch1;
     float cur_d_t_ch2 = self->cur_d_t_ch2;
-    float pos_r_ch1 = self->pos_r_ch_1;
-    float pos_r_ch2 = self->pos_r_ch_2;
-    int pos_w_ch1 = self->pos_w_ch1;
-    int pos_w_ch2 = self->pos_w_ch2;
+    float cur_gain_in = self->cur_gain_in;
+    float cur_gain_dry = self->cur_gain_dry;
+    float cur_gain_wet = self->cur_gain_wet;
+    float cp_enabled = *self->cp_enabled;
+    float cp_hcf_fb_on = *self->cp_hcf_fb_on;
+    float cp_hcf_fb_freq = *self->cp_hcf_fb_freq;
+    float cp_hcf_fb_q = *self->cp_hcf_fb_q;
+    float cp_lcf_fb_on = *self->cp_lcf_fb_on;
+    float cp_lcf_fb_freq = *self->cp_lcf_fb_freq;
+    float cp_lcf_fb_q = *self->cp_lcf_fb_q;
+    float cp_hcf_pre_on = *self->cp_hcf_pre_on;
+    float cp_hcf_pre_freq = *self->cp_hcf_pre_freq;
+    float cp_hcf_pre_q = *self->cp_hcf_pre_q;
+    float cp_lcf_pre_on = *self->cp_lcf_pre_on;
+    float cp_lcf_pre_freq = *self->cp_lcf_pre_freq;
+    float cp_lcf_pre_q = *self->cp_lcf_pre_q;
+    float cp_mod_rate = *self->cp_mod_rate;
+    float cp_mod_depth = *self->cp_mod_depth;
+    int fade_pos = self->fade_pos;
+    int fade_length = self->fade_length;
+    float lfo_x = self->lfo_x;
+    int pos_w = self->pos_w;
+    double rate = self->sample_rate;
     BollieState state = self->state;
     float tgt_gain_in = self->tgt_gain_in;
     float tgt_gain_dry = self->tgt_gain_dry;
@@ -329,41 +452,7 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
         || self->cur_tempo_div_ch1 != *self->cp_tempo_div_ch1
         || self->cur_tempo_div_ch2 != *self->cp_tempo_div_ch2
     ) {
-        // Fade out
-        if (state == FADE_OUT_DONE) {
-            // Memorize current settings
-            self->cur_tempo = cur_tempo;
-            self->cur_tempo_div_ch1 = *self->cp_tempo_div_ch1;
-            self->cur_tempo_div_ch2 = *self->cp_tempo_div_ch2;
-
-            // Calculate sample offset and memorize it
-            cur_d_t_ch1 = calc_delay_samples(self, cur_tempo, 
-                self->cur_tempo_div_ch1);
-            cur_d_t_ch2 = calc_delay_samples(self, cur_tempo, 
-                self->cur_tempo_div_ch2);
-
-            // Safety!
-            if (cur_d_t_ch1 + 1.f > MAX_BUF_SIZE) 
-                cur_d_t_ch1 = MAX_BUF_SIZE-1.f;
-
-            if (cur_d_t_ch2 + 1.f > MAX_BUF_SIZE)
-                cur_d_t_ch2 = MAX_BUF_SIZE-1.f;
-
-            // The buffer is integer, so make sure, it is big enough.
-            cur_d_s_ch1 = ceil(cur_d_t_ch1) + 1;
-            cur_d_s_ch2 = ceil(cur_d_t_ch2) + 1;
-
-            pos_r_ch1 = 0;
-            pos_r_ch2 = 0;
-            pos_w_ch1 = 0;
-            pos_w_ch2 = 0;
-
-            *self->cp_tempo_out = cur_tempo;
-            state = FILL_BUF;
-        }
-        else if (state != FADE_OUT) {
-            state = FADE_OUT;
-        }
+        state = FADE_OUT;
     }
 
     // Gain handling
@@ -408,10 +497,10 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
     
     // Feedback
     if (*self->cp_fb != self->cur_cp_fb) {
-        if (*self->cp_fb > 12.f) {
+        if (*self->cp_fb > 12.f ) {
             tgt_fb = 4.f;
         }
-        else if (*self->cp_fb < 96.f) {
+        else if (*self->cp_fb < -96.f) {
             tgt_fb = 0;
         }
         else {
@@ -433,29 +522,174 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
         }
         self->cur_cp_cf = *self->cp_cf;
     } 
-    
 
+    // Modulation
+    if (cp_mod_depth < 0.1f || cp_mod_depth > 5.f)
+        cp_mod_depth = 2.f;
+
+    if (cp_mod_rate < 0.1f || cp_mod_depth > 3.f)
+        cp_mod_depth = 1.f;
 
     // Loop over the block of audio we got
     for (unsigned int i = 0 ; i < n_samples ; ++i) {
 
-        // Current samples
-        float cur_s_ch1 = self->input_ch1[i];
-        float cur_s_ch2 = self->input_ch1[2];
+        // Parameter smoothing
+        cur_gain_in = tgt_gain_in * 0.01f + cur_gain_in * 0.99f;
+        cur_gain_dry = tgt_gain_dry * 0.01f + cur_gain_dry * 0.99f;
+        cur_gain_wet = tgt_gain_wet * 0.01f + cur_gain_wet * 0.99f;
+        cur_cf = tgt_cf * 0.01f + cur_cf * 0.99f;
+        cur_fb = tgt_fb * 0.01f + cur_fb * 0.99f;
+
+        // Keep the LFO running
+        float lfo_offset = (cp_mod_depth / 1000 * rate) 
+            * sin(cp_mod_rate * (2*M_PI) * lfo_x / rate);
+
+        lfo_x = lfo_x + 1 >= rate ? 0 : lfo_x + 1;
 
         // Store old samples here
         float old_s_ch1 = 0;
         float old_s_ch2 = 0;
+
+        // Current samples
+        float cur_s_ch1 = self->input_ch1[i] * cur_gain_in;
+        float cur_s_ch2 = self->input_ch2[i] * cur_gain_in;
+
+        // Gain coefficient used while fading
+        float fade_coeff = 0;
+
+        // Fade out is done, time for tempo change
+        if (state == FADE_OUT_DONE) {
+            // Memorize current settings
+            self->cur_tempo = cur_tempo;
+            self->cur_tempo_div_ch1 = *self->cp_tempo_div_ch1;
+            self->cur_tempo_div_ch2 = *self->cp_tempo_div_ch2;
+
+            // Calculate sample offset and memorize it
+            cur_d_t_ch1 = calc_delay_samples(self, cur_tempo, 
+                self->cur_tempo_div_ch1);
+            cur_d_t_ch2 = calc_delay_samples(self, cur_tempo, 
+                self->cur_tempo_div_ch2);
+
+            // Safety!
+            if (cur_d_t_ch1 + 1.f > MAX_BUF_SIZE) 
+                cur_d_t_ch1 = MAX_BUF_SIZE-1.f;
+
+            if (cur_d_t_ch2 + 1.f > MAX_BUF_SIZE)
+                cur_d_t_ch2 = MAX_BUF_SIZE-1.f;
+
+            // The buffer is integer, so make sure, it is big enough.
+            cur_d_s_ch1 = ceil(cur_d_t_ch1) + 1;
+            cur_d_s_ch2 = ceil(cur_d_t_ch2) + 1;
+
+            pos_w = 0;
+
+            *self->cp_tempo_out = cur_tempo;
+            state = FILL_BUF;
+        }
+        else if (state == FADE_OUT) {
+            if (fade_pos > 0) { 
+               fade_coeff = --fade_pos * (1/(float)fade_length); 
+            }
+            else {
+                state = FADE_OUT_DONE;
+            }
+        }
+        else if (state == FADE_IN) {
+            if (fade_pos < fade_length) {
+                fade_coeff = fade_pos++ * (1/(float)fade_length);
+            }
+            else {
+                state = CYCLE;
+                fade_coeff = 1;
+            }
+        }
+        else if (state == FILL_BUF) {
+            if (pos_w >= cur_d_s_ch1 && pos_w >= cur_d_s_ch2) {
+                state = FADE_IN;
+            }
+        }
+        else {
+            fade_coeff = 1;
+        }
+
+        // In this states, we'll retrieve old samples, interpolate if needed
+        if (state == FADE_IN || state == FADE_OUT || state == CYCLE) {
+            // Channel 1
+            float x = (float)pos_w - cur_d_t_ch1 + lfo_offset; 
+            if (x < 0) x = MAX_BUF_SIZE + x;
+            old_s_ch1 = interpolate(self->buffer_ch1, x) * fade_coeff;
+
+            // Channel 2
+            x = (float)pos_w - cur_d_t_ch2 + lfo_offset; 
+            if (x < 0) x = MAX_BUF_SIZE + x;
+            old_s_ch2 = interpolate(self->buffer_ch2, x) * fade_coeff;
+
+            // High pass filter on feedback
+            if (cp_hcf_fb_on) {
+                old_s_ch1 = bf_hcf(old_s_ch1, cp_hcf_fb_freq, cp_hcf_fb_q, rate,
+                    &self->fil_hcf_fb_ch1);
+                old_s_ch2 = bf_hcf(old_s_ch2, cp_hcf_fb_freq, cp_hcf_fb_q, rate,
+                    &self->fil_hcf_fb_ch2);
+            }
+
+            // Low pass filter on feedback
+            if (cp_lcf_fb_on) {
+                old_s_ch1 = bf_lcf(old_s_ch1, cp_lcf_fb_freq, cp_lcf_fb_q, rate,
+                    &self->fil_lcf_fb_ch1);
+                old_s_ch2 = bf_lcf(old_s_ch2, cp_lcf_fb_freq, cp_lcf_fb_q, rate,
+                    &self->fil_lcf_fb_ch2);
+            }
+        }
+
+        /* Filtering before feedback loop */
+        float cur_fil_s_ch1 = cur_s_ch1; // current filtered sample
+        float cur_fil_s_ch2 = cur_s_ch2;
+        if (cp_hcf_pre_on) {
+            cur_fil_s_ch1 = bf_hcf(cur_fil_s_ch1, cp_hcf_pre_freq, cp_hcf_pre_q, 
+                rate, &self->fil_hcf_pre_ch1);
+            cur_fil_s_ch2 = bf_hcf(cur_fil_s_ch2, cp_hcf_pre_freq, cp_hcf_pre_q, 
+                rate, &self->fil_hcf_pre_ch2);
+        }
+
+        if (cp_lcf_pre_on) {
+            cur_fil_s_ch1 = bf_lcf(cur_fil_s_ch1, cp_lcf_pre_freq, cp_lcf_pre_q, 
+                rate, &self->fil_lcf_pre_ch1);
+            cur_fil_s_ch2 = bf_lcf(cur_fil_s_ch2, cp_lcf_pre_freq, cp_lcf_pre_q, 
+                rate, &self->fil_lcf_pre_ch2);
+        }
+
+        /* Summing for the delay lines */
+        self->buffer_ch1[pos_w] = cur_fil_s_ch1 
+            + old_s_ch1 * cur_fb
+            + old_s_ch2 * cur_cf
+        ;
+        
+        self->buffer_ch2[pos_w] = cur_fil_s_ch2
+            + old_s_ch2 * cur_fb
+            + old_s_ch1 * cur_cf
+        ;
+        
+        // Final summing
+        self->output_ch1[i] = cur_s_ch1 * cur_gain_dry 
+            + old_s_ch1 * cur_gain_wet;
+        self->output_ch2[i] = cur_s_ch2 * cur_gain_dry 
+            + old_s_ch2 * cur_gain_wet;
+
+        pos_w = pos_w + 1 >= MAX_BUF_SIZE ? 0 : pos_w + 1;        
     }
 
-    self->cur_d_s_ch1 = cur_d_s_ch_1;
-    self->cur_d_s_ch2 = cur_d_s_ch_2;
-    self->cur_d_t_ch1 = cur_d_t_ch_1;
-    self->cur_d_t_ch2 = cur_d_t_ch_2;
-    self->pos_r_ch1 = pos_r_ch1;
-    self->pos_r_ch2 = pos_r_ch2;
-    self->pos_w_ch1 = pos_w_ch1;
-    self->pos_w_ch2 = pos_w_ch2;
+    self->cur_d_s_ch1 = cur_d_s_ch1;
+    self->cur_d_s_ch2 = cur_d_s_ch2;
+    self->cur_d_t_ch1 = cur_d_t_ch1;
+    self->cur_d_t_ch2 = cur_d_t_ch2;
+    self->cur_fb = cur_fb;
+    self->cur_cf = cur_cf;
+    self->cur_gain_dry = cur_gain_dry;
+    self->cur_gain_in = cur_gain_in;
+    self->cur_gain_wet = cur_gain_wet;
+    self->fade_pos = fade_pos;
+    self->lfo_x = lfo_x;
+    self->pos_w = pos_w;
     self->state = state;
     self->tgt_gain_in = tgt_gain_in;
     self->tgt_gain_dry = tgt_gain_dry;
