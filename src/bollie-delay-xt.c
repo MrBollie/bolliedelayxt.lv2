@@ -174,6 +174,8 @@ typedef struct {
     float cur_gain_in;
     float cur_gain_wet;
 
+    float cur_mod_rate;
+
     float cur_tempo;
     float cur_tempo_div_ch1;
     float cur_tempo_div_ch2;
@@ -184,10 +186,7 @@ typedef struct {
     int cur_d_s_ch1;
     int cur_d_s_ch2;
 
-    float lfo_b1;
-    float lfo_b2;
-    float lfo_z1;
-    float lfo_z2;
+    float lfo_x;
 
     int fade_length;
     int fade_pos;
@@ -352,13 +351,11 @@ static void activate(LV2_Handle instance) {
     self->cur_gain_in = 0;
     self->cur_gain_dry = 0;
     self->cur_gain_wet = 0;
+    self->cur_mod_rate = 0;
     self->cur_cf = 0;
     self->cur_fb = 0;
     self->cur_tempo = 0;
-    self->lfo_b1 = 0;
-    self->lfo_b2 = 0;
-    self->lfo_z1 = 0;
-    self->lfo_z2 = 0;
+    self->lfo_x = 0;
 
     bf_init(&self->fil_hcf_fb_ch1);
     bf_init(&self->fil_hcf_fb_ch2);
@@ -368,12 +365,6 @@ static void activate(LV2_Handle instance) {
     bf_init(&self->fil_hcf_pre_ch2);
     bf_init(&self->fil_lcf_pre_ch1);
     bf_init(&self->fil_lcf_pre_ch2);
-
-    // LFO init
-    self->lfo_b1 = 0;
-    self->lfo_b2 = 0;
-    self->lfo_z1 = 0;
-    self->lfo_z2 = 0;
 }
 
 
@@ -446,6 +437,7 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
     float cur_gain_in = self->cur_gain_in;
     float cur_gain_dry = self->cur_gain_dry;
     float cur_gain_wet = self->cur_gain_wet;
+    float cur_mod_rate = self->cur_mod_rate;
     float cp_enabled = *self->cp_enabled;
     float cp_hcf_fb_on = *self->cp_hcf_fb_on;
     float cp_hcf_fb_freq = *self->cp_hcf_fb_freq;
@@ -464,10 +456,7 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
     float cp_mod_rate = *self->cp_mod_rate;
     int fade_pos = self->fade_pos;
     int fade_length = self->fade_length;
-    float lfo_b1 = self->lfo_b1;
-    float lfo_b2 = self->lfo_b2;
-    float lfo_z1 = self->lfo_z1;
-    float lfo_z2 = self->lfo_z2;
+    float lfo_x = self->lfo_x;
     int pos_w = self->pos_w;
     double rate = self->sample_rate;
     BollieState state = self->state;
@@ -565,18 +554,6 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
     if (cp_mod_rate < 0.1f || cp_mod_depth > 5.f)
         cp_mod_rate = 0.1f;
 
-    // Update frequency
-    if (cp_mod_on && cp_mod_rate != self->cur_cp_mod_rate) {
-        float wT = (2.0f * M_PI * cp_mod_rate) / (float)rate;
-        lfo_b1 = -2.0f * cos(wT);
-        lfo_b2 = 1.f;
-        double wnT1 = asin(lfo_z1);
-        float n = wnT1/wT;
-        n = lfo_z1 > lfo_z2 ? n-1 : n+1;
-        lfo_z2 = sin(n*wT);
-        self->cur_cp_mod_rate = cp_mod_rate;
-    }
-
     // Loop over the block of audio we got
     for (unsigned int i = 0 ; i < n_samples ; ++i) {
 
@@ -584,19 +561,17 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
         cur_gain_in = tgt_gain_in * 0.01f + cur_gain_in * 0.99f;
         cur_gain_dry = tgt_gain_dry * 0.01f + cur_gain_dry * 0.99f;
         cur_gain_wet = tgt_gain_wet * 0.01f + cur_gain_wet * 0.99f;
+        cur_mod_rate = cp_mod_rate * 0.01f + cur_mod_rate * 0.99f;
         cur_cf = tgt_cf * 0.01f + cur_cf * 0.99f;
         cur_fb = tgt_fb * 0.01f + cur_fb * 0.99f;
 
         // Keep the LFO running
         float lfo_offset = 0;
         if (cp_mod_on) {
-            float lfo_coeff = -lfo_b1 * lfo_z1 - lfo_b2 * lfo_z2;
-            lfo_z2 = lfo_z1;
-            lfo_z1 = lfo_coeff;
+            float lfo_coeff = sin(cur_mod_rate * (2*M_PI) * lfo_x / rate);
             lfo_offset = (cp_mod_depth / 1000 * rate) * lfo_coeff;
-            printf("LFO-Offset: %.4f\n", lfo_coeff);
+            if (++lfo_x > rate / cur_mod_rate) lfo_x = 0;
         }
-            printf("Jupp\n");
 
         // Store old samples here
         float old_s_ch1 = 0;
@@ -739,11 +714,9 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
     self->cur_gain_dry = cur_gain_dry;
     self->cur_gain_in = cur_gain_in;
     self->cur_gain_wet = cur_gain_wet;
+    self->cur_mod_rate = cur_mod_rate;
     self->fade_pos = fade_pos;
-    self->lfo_b1 = lfo_b1;
-    self->lfo_b2 = lfo_b2;
-    self->lfo_z1 = lfo_z1;
-    self->lfo_z2 = lfo_z2;
+    self->lfo_x = lfo_x;
     self->pos_w = pos_w;
     self->state = state;
     self->tgt_gain_in = tgt_gain_in;
