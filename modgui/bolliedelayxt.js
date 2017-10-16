@@ -3,8 +3,8 @@ function (event) {
     function handle_event (symbol, value) {
         var output = value.toFixed(2) + " BPM";
         switch (symbol) {
-            case 'tempo_out':
-                event.icon.find ('[mod-port-symbol=tempo_out]').text(output);
+            case 'CP_TEMPO_OUT':
+                event.icon.find ('[mod-port-symbol=CP_TEMPO_OUT]').text(output);
                 break;
             default:
                 break;

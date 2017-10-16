@@ -19,7 +19,7 @@
     doap:license <http://usefulinc.com/doap/licenses/gpl> ;
     doap:maintainer <http://ca9.eu/bollie#me> ;
     lv2:microVersion 6 ; lv2:minorVersion 2 ;
-    doap:name "Bollie Delay";
+    doap:name "Bollie Delay XT";
     lv2:optionalFeature lv2:hardRTCapable ;
     lv2:port [
         a lv2:AudioPort ,
@@ -55,6 +55,7 @@
         lv2:minimum 0 ;
         lv2:maximum 1;
         lv2:portProperty lv2:integer, lv2:toggled;
+        lv2:designation lv2:enabled;
     ] , [
         a lv2:InputPort ,
             lv2:ControlPort ;
@@ -385,7 +386,7 @@
         a lv2:OutputPort ,
             lv2:ControlPort ;
         lv2:index 31 ;
-        lv2:symbol "tempo_out" ;
+        lv2:symbol "CP_TEMPO_OUT" ;
         lv2:name "Current tempo" ;
         lv2:default 120 ;
         lv2:minimum 6 ;

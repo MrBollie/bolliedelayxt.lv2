@@ -10,8 +10,8 @@
         modgui:screenshot <modgui/screenshot-bolliedelayxt.png> ;
         modgui:thumbnail <modgui/thumbnail-bolliedelayxt.png> ;
         modgui:brand "Bollie" ;
-        modgui:label "Delay" ;
+        modgui:label "Delay XT" ;
         modgui:monitoredOutputs [
-            lv2:symbol "tempo_out" ;
+            lv2:symbol "CP_TEMPO_OUT" ;
         ] ; 
     ] .
