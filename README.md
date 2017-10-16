@@ -2,7 +2,7 @@
 
 The evolution of my bolliedelay.lv2
 
-![screenshot](https://github.com/MrBollie/bolliedelayxt.lv2/blob/lfotable/modgui/screenshot-bolliedelayxt.png?raw=true)
+![screenshot](https://github.com/MrBollie/bolliedelayxt.lv2/blob/tablelfo/modgui/screenshot-bolliedelayxt.png)
 
 It now features 
 - full control over two seperate channels
