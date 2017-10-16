@@ -58,6 +58,7 @@ typedef enum {
     CP_ENABLED,
     CP_TRAILS,
     CP_TEMPO_MODE,
+    CP_PING_PONG,
     CP_TEMPO_HOST,    
     CP_TEMPO_USER,    
     CP_TEMPO_DIV_CH1,
@@ -116,6 +117,7 @@ typedef struct {
     const float *cp_enabled;
     const float *cp_trails;
     const float *cp_tempo_mode;
+    const float *cp_ping_pong;
     const float *cp_tempo_host;
     const float *cp_tempo_user;
     const float *cp_tempo_div_ch1;
@@ -265,6 +267,9 @@ static void connect_port(LV2_Handle instance, uint32_t port, void *data) {
             break;
         case CP_TRAILS:
             self->cp_trails = data;
+            break;
+        case CP_PING_PONG:
+            self->cp_ping_pong = data;
             break;
         case CP_TEMPO_MODE:
             self->cp_tempo_mode = data;
@@ -455,6 +460,7 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
     float cur_mod_depth = self->cur_mod_depth;
     float cur_mod_rate = self->cur_mod_rate;
     float cp_enabled = *self->cp_enabled;
+    float cp_ping_pong = *self->cp_ping_pong;
     float cp_hcf_fb_on = *self->cp_hcf_fb_on;
     float cp_hcf_fb_freq = *self->cp_hcf_fb_freq;
     float cp_hcf_fb_q = *self->cp_hcf_fb_q;

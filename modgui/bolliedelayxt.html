@@ -1,6 +1,6 @@
 <div class="mod-pedal bolliedelay">
  <div mod-role="drag-handle" class="mod-drag-handle"></div>
- <div class="bollie-group">
+ <div class="bollie-group double">
   <div class="mod-knob" title="This sets the tempo mode.">
    <div class="mod-knob-image" mod-role="input-control-port"
     mod-port-symbol="CP_TEMPO_MODE"></div><span class=
@@ -28,6 +28,16 @@
     "mod-knob-title">Div. Ch. 2</span>
    <div class="mod-knob-value" contenteditable="false"
     mod-role="input-control-value" mod-port-symbol="CP_TEMPO_DIV_CH1"></div>
+  </div>
+  <div class="mod-knob" title="Ping Pong Mode">
+   <div class="mod-toggle off" mod-role="input-control-port"
+    mod-port-symbol="CP_PING_PONG" mod-widget="switch"></div><span 
+    class="mod-knob-title">Ping Pong</span>
+  </div>
+  <div class="mod-knob bpm" title="Current BPM">
+   <div class="bollie-value" contenteditable="false"
+    mod-role="output-control-value" mod-port-symbol=
+    "CP_TEMPO_OUT"></div><span class="mod-knob-title">Cur. Tempo</span>
   </div>
  </div><div class="bollie-group">
   <div class="mod-knob" title="Dry Gain">
@@ -80,12 +90,6 @@
     class="mod-knob-title">Rate</span>
    <div class="mod-knob-value" contenteditable="false"
     mod-role="input-control-value" mod-port-symbol="CP_MOD_RATE"></div>
-  </div>
- </div><div class="bollie-group">
-  <div class="mod-knob bpm" title="Current BPM">
-   <div class="bollie-value" contenteditable="false"
-    mod-role="output-control-value" mod-port-symbol=
-    "CP_TEMPO_OUT"></div><span class="mod-knob-title">Cur. Tempo</span>
   </div>
  </div><div class="bollie-group">
   <div class="mod-knob" title="Switch High Cut Filter">

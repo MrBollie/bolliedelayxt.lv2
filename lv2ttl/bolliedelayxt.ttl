@@ -89,6 +89,16 @@
         a lv2:InputPort ,
             lv2:ControlPort ;
         lv2:index 7 ;
+        lv2:symbol "CP_PING_PONG" ;
+        lv2:name "Ping Pong on" ;
+        lv2:default 0 ;
+        lv2:minimum 0 ;
+        lv2:maximum 1;
+        lv2:portProperty lv2:integer, lv2:toggled;
+    ] , [
+        a lv2:InputPort ,
+            lv2:ControlPort ;
+        lv2:index 8 ;
         lv2:symbol "CP_TEMPO_HOST" ;
         lv2:name "Host/MOD-Tempo";
         lv2:default 120 ;
@@ -100,7 +110,7 @@
     ] , [
         a lv2:InputPort ,
             lv2:ControlPort ;
-        lv2:index 8 ;
+        lv2:index 9 ;
         lv2:symbol "CP_TEMPO_USER" ;
         lv2:name "User-Tempo";
         lv2:default 120 ;
@@ -110,7 +120,7 @@
     ] , [
         a lv2:InputPort ,
             lv2:ControlPort ;
-        lv2:index 9 ;
+        lv2:index 10 ;
         lv2:symbol "CP_TEMPO_DIV_CH1" ;
         lv2:name "Div. Ch. 1" ;
         lv2:default 0 ;
@@ -145,7 +155,7 @@
     ] , [
         a lv2:InputPort ,
             lv2:ControlPort ;
-        lv2:index 10 ;
+        lv2:index 11 ;
         lv2:symbol "CP_TEMPO_DIV_CH2" ;
         lv2:name "Div. Ch. 2" ;
         lv2:default 0 ;
@@ -180,7 +190,7 @@
     ] , [
         a lv2:InputPort ,
             lv2:ControlPort ;
-        lv2:index 11 ;
+        lv2:index 12 ;
         lv2:symbol "CP_FB" ;
         lv2:name "Feedback" ;
         lv2:default -12.0 ;
@@ -190,7 +200,7 @@
     ] , [
         a lv2:InputPort ,
             lv2:ControlPort ;
-        lv2:index 12 ;
+        lv2:index 13 ;
         lv2:symbol "CP_CF" ;
         lv2:name "Crossfeed" ;
         lv2:default -12.0 ;
@@ -200,7 +210,7 @@
     ] , [
         a lv2:InputPort ,
             lv2:ControlPort ;
-        lv2:index 13 ;
+        lv2:index 14 ;
         lv2:symbol "CP_GAIN_DRY" ;
         lv2:name "Dry Gain" ;
         lv2:default 0.0 ;
@@ -210,7 +220,7 @@
     ] , [
         a lv2:InputPort ,
             lv2:ControlPort ;
-        lv2:index 14 ;
+        lv2:index 15 ;
         lv2:symbol "CP_GAIN_WET" ;
         lv2:name "Wet Gain" ;
         lv2:default -12.0 ;
@@ -220,7 +230,7 @@
     ] , [
         a lv2:InputPort ,
             lv2:ControlPort ;
-        lv2:index 15 ;
+        lv2:index 16 ;
         lv2:symbol "CP_MOD_ON" ;
         lv2:name "Modulation on" ;
         lv2:default 0 ;
@@ -230,7 +240,7 @@
     ] , [
         a lv2:InputPort ,
             lv2:ControlPort ;
-        lv2:index 16 ;
+        lv2:index 17 ;
         lv2:symbol "CP_MOD_PHASE" ;
         lv2:name "Modulation Phase" ;
         lv2:default 0 ;
@@ -240,7 +250,7 @@
     ] , [
         a lv2:InputPort ,
             lv2:ControlPort ;
-        lv2:index 17 ;
+        lv2:index 18 ;
         lv2:symbol "CP_MOD_DEPTH" ;
         lv2:name "Mod. Depth" ;
         lv2:default 2.0 ;
@@ -250,7 +260,7 @@
     ] , [
         a lv2:InputPort ,
             lv2:ControlPort ;
-        lv2:index 18 ;
+        lv2:index 19 ;
         lv2:symbol "CP_MOD_RATE" ;
         lv2:name "Mod. Rate" ;
         lv2:default 0.1 ;
@@ -261,7 +271,7 @@
     ] , [
         a lv2:InputPort ,
             lv2:ControlPort ;
-        lv2:index 19 ;
+        lv2:index 20 ;
         lv2:symbol "CP_HCF_PRE_ON" ;
         lv2:name "High Cut Pre On" ;
         lv2:default 0 ;
@@ -271,7 +281,7 @@
     ] , [
         a lv2:InputPort ,
             lv2:ControlPort ;
-        lv2:index 20 ;
+        lv2:index 21 ;
         lv2:symbol "CP_HCF_PRE_FREQ" ;
         lv2:name "High Cut Pre Freq." ;
         lv2:default 7500.0 ;
@@ -282,7 +292,7 @@
     ] , [
         a lv2:InputPort ,
             lv2:ControlPort ;
-        lv2:index 21 ;
+        lv2:index 22 ;
         lv2:symbol "CP_HCF_PRE_Q" ;
         lv2:name "High Cut Pre Q." ;
         lv2:default 1.0 ;
@@ -292,7 +302,7 @@
     ] , [
         a lv2:InputPort ,
             lv2:ControlPort ;
-        lv2:index 22 ;
+        lv2:index 23 ;
         lv2:symbol "CP_LCF_PRE_ON" ;
         lv2:name "Low Cut Pre On" ;
         lv2:default 0 ;
@@ -302,7 +312,7 @@
     ] , [
         a lv2:InputPort ,
             lv2:ControlPort ;
-        lv2:index 23 ;
+        lv2:index 24 ;
         lv2:symbol "CP_LCF_PRE_FREQ" ;
         lv2:name "Low Cut Pre Freq." ;
         lv2:default 20.000 ;
@@ -313,7 +323,7 @@
     ] , [
         a lv2:InputPort ,
             lv2:ControlPort ;
-        lv2:index 24 ;
+        lv2:index 25 ;
         lv2:symbol "CP_LCF_PRE_Q" ;
         lv2:name "Low Cut Pre Q." ;
         lv2:default 1.0 ;
@@ -323,7 +333,7 @@
     ] , [
         a lv2:InputPort ,
             lv2:ControlPort ;
-        lv2:index 25 ;
+        lv2:index 26 ;
         lv2:symbol "CP_HCF_FB_ON" ;
         lv2:name "High Cut Feedback On" ;
         lv2:default 0 ;
@@ -333,7 +343,7 @@
     ] , [
         a lv2:InputPort ,
             lv2:ControlPort ;
-        lv2:index 26 ;
+        lv2:index 27 ;
         lv2:symbol "CP_HCF_FB_FREQ" ;
         lv2:name "High Cut Feedback Freq." ;
         lv2:default 7500.0 ;
@@ -344,7 +354,7 @@
     ] , [
         a lv2:InputPort ,
             lv2:ControlPort ;
-        lv2:index 27 ;
+        lv2:index 28 ;
         lv2:symbol "CP_HCF_FB_Q" ;
         lv2:name "High Cut Feedback Q." ;
         lv2:default 1.0 ;
@@ -354,7 +364,7 @@
     ] , [
         a lv2:InputPort ,
             lv2:ControlPort ;
-        lv2:index 28 ;
+        lv2:index 29 ;
         lv2:symbol "CP_LCF_FB_ON" ;
         lv2:name "Low Cut Feedback On" ;
         lv2:default 0 ;
@@ -364,7 +374,7 @@
     ] , [
         a lv2:InputPort ,
             lv2:ControlPort ;
-        lv2:index 29 ;
+        lv2:index 30 ;
         lv2:symbol "CP_LCF_FB_FREQ" ;
         lv2:name "Low Cut Feedback Freq." ;
         lv2:default 20.000 ;
@@ -375,7 +385,7 @@
     ] , [
         a lv2:InputPort ,
             lv2:ControlPort ;
-        lv2:index 30 ;
+        lv2:index 31 ;
         lv2:symbol "CP_LCF_FB_Q" ;
         lv2:name "Low Cut Feedback Q." ;
         lv2:default 1.0 ;
@@ -385,7 +395,7 @@
     ] , [
         a lv2:OutputPort ,
             lv2:ControlPort ;
-        lv2:index 31 ;
+        lv2:index 32 ;
         lv2:symbol "CP_TEMPO_OUT" ;
         lv2:name "Current tempo" ;
         lv2:default 120 ;
@@ -393,5 +403,5 @@
         lv2:maximum 1000 ;
         units:unit units:bpm ;
     ] ;
-    rdfs:comment '''This stereo tempo delay features high pass and low pass filters as well as host tempo. When using it with the MOD Duo on software version >1.2.0, then please assign a footswitch to Host/MOD-Tempo. Otherwise you can assign the tap button to a foot switch. Always make sure to set the correct tempo mode. 
+    rdfs:comment '''This stereo tempo delay features high pass and low pass filters as well as host tempo. This extended version features also modulation and clickless bypass as well als a trail mode. Be careful with the latter, as it will only fade out the signal to the delay buffers. Dry gain will be left untouched then and processing will continue to work in the background. 
     Enjoy! :-) And feedback is always welcome.''' .

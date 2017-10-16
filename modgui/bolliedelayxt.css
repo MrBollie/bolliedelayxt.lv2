@@ -106,6 +106,20 @@
     text-align: center;
 }
 
+.bolliedelay .bollie-group.double {
+    margin:5px 0px 0px 5px !important;
+    position:relative;
+    text-align:left;
+    z-index:30;
+    border-style: solid;
+    border-width: 1px;
+    border-color: #888888;
+    width: 615px;
+    display:inline-block;
+    padding: 2px 2px 0px 2px;
+    text-align: center;
+}
+
 .bolliedelay .bollie-group .mod-knob > span.mod-knob-title {
     bottom:14px;
     cursor:default;
