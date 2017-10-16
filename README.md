@@ -2,6 +2,8 @@
 
 The evolution of my bolliedelay.lv2
 
+![screenshot](https://github.com/MrBollie/bolliedelayxt.lv2/blob/lfotable/modgui/screenshot-bolliedelayxt.png?raw=true)
+
 It now features 
 - full control over two seperate channels
 - HPF/LPF on both, the delay path and feedback path
