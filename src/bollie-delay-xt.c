@@ -186,7 +186,7 @@ typedef struct {
     int cur_d_s_ch1;
     int cur_d_s_ch2;
 
-    float lfo_x;
+    double lfo_x;
 
     int fade_length;
     int fade_pos;
@@ -561,7 +561,6 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
         cur_gain_in = tgt_gain_in * 0.01f + cur_gain_in * 0.99f;
         cur_gain_dry = tgt_gain_dry * 0.01f + cur_gain_dry * 0.99f;
         cur_gain_wet = tgt_gain_wet * 0.01f + cur_gain_wet * 0.99f;
-        cur_mod_rate = cp_mod_rate * 0.01f + cur_mod_rate * 0.99f;
         cur_cf = tgt_cf * 0.01f + cur_cf * 0.99f;
         cur_fb = tgt_fb * 0.01f + cur_fb * 0.99f;
 
@@ -570,7 +569,13 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
         if (cp_mod_on) {
             float lfo_coeff = sin(cur_mod_rate * (2*M_PI) * lfo_x / rate);
             lfo_offset = (cp_mod_depth / 1000 * rate) * lfo_coeff;
-            if (++lfo_x > rate / cur_mod_rate) lfo_x = 0;
+            if (lfo_x > 0) {
+                lfo_x--;
+            }
+            else {
+                cur_mod_rate = cp_mod_rate;
+                lfo_x = rate / cur_mod_rate - 1;
+            }
         }
 
         // Store old samples here
