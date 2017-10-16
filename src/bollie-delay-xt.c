@@ -35,8 +35,8 @@
 #define URI "https://ca9.eu/lv2/bolliedelayxt"
 
 // Max buffer size == 192k * 10 seconds (max delay time) + a bit for modulation
+#define TWO_PI (M_PI*2)
 #define MAX_BUF_SIZE 1930000
-
 #define FADE_LENGTH_MS 50
 
 
@@ -186,7 +186,9 @@ typedef struct {
     int cur_d_s_ch1;
     int cur_d_s_ch2;
 
-    double lfo_x;
+    double lfo_circle;
+    double lfo_cur_phase;
+    double lfo_incr;
 
     int fade_length;
     int fade_pos;
@@ -219,6 +221,10 @@ static LV2_Handle instantiate(const LV2_Descriptor * descriptor, double rate,
     // Prepare fade stuff
     self->fade_length = ceil(rate / 1000 * FADE_LENGTH_MS);
     self->fade_pos = 0;
+
+    // Prepare the LFO increment based on sample rate - 1 Hz
+    self->lfo_circle = TWO_PI / rate;
+
     return (LV2_Handle)self;
 }
 
@@ -355,7 +361,8 @@ static void activate(LV2_Handle instance) {
     self->cur_cf = 0;
     self->cur_fb = 0;
     self->cur_tempo = 0;
-    self->lfo_x = 0;
+    self->lfo_cur_phase = 0.0;
+    self->lfo_incr = 0.0;
 
     bf_init(&self->fil_hcf_fb_ch1);
     bf_init(&self->fil_hcf_fb_ch2);
@@ -456,7 +463,9 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
     float cp_mod_rate = *self->cp_mod_rate;
     int fade_pos = self->fade_pos;
     int fade_length = self->fade_length;
-    float lfo_x = self->lfo_x;
+    float lfo_circle = self->lfo_circle;
+    float lfo_cur_phase = self->lfo_cur_phase;
+    float lfo_incr = self->lfo_incr;
     int pos_w = self->pos_w;
     double rate = self->sample_rate;
     BollieState state = self->state;
@@ -567,14 +576,18 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
         // Keep the LFO running
         float lfo_offset = 0;
         if (cp_mod_on) {
-            float lfo_coeff = sin(cur_mod_rate * (2*M_PI) * lfo_x / rate);
+            float lfo_coeff = (float)sin(lfo_cur_phase);
             lfo_offset = (cp_mod_depth / 1000 * rate) * lfo_coeff;
-            if (lfo_x > 0) {
-                lfo_x--;
-            }
-            else {
+            if (cur_mod_rate != cp_mod_rate) {
                 cur_mod_rate = cp_mod_rate;
-                lfo_x = rate / cur_mod_rate - 1;
+                lfo_incr = lfo_circle * cur_mod_rate;
+            }
+            lfo_cur_phase += lfo_incr;
+            if (lfo_cur_phase >= TWO_PI) {
+                lfo_cur_phase -= TWO_PI;
+            }
+            else if(lfo_cur_phase < 0.0) {
+                lfo_cur_phase += TWO_PI;
             }
         }
 
@@ -721,7 +734,8 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
     self->cur_gain_wet = cur_gain_wet;
     self->cur_mod_rate = cur_mod_rate;
     self->fade_pos = fade_pos;
-    self->lfo_x = lfo_x;
+    self->lfo_cur_phase = lfo_cur_phase;
+    self->lfo_incr = lfo_incr;
     self->pos_w = pos_w;
     self->state = state;
     self->tgt_gain_in = tgt_gain_in;
