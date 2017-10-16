@@ -38,6 +38,7 @@
 #define TWO_PI (M_PI*2)
 #define MAX_BUF_SIZE 1930000
 #define FADE_LENGTH_MS 50
+#define LFO_TABLEN (1024)
 
 
 /**
@@ -63,10 +64,10 @@ typedef enum {
     CP_TEMPO_DIV_CH2,
     CP_FB,
     CP_CF,
-    CP_GAIN_IN,
     CP_GAIN_DRY,
     CP_GAIN_WET,
     CP_MOD_ON,
+    CP_MOD_PHASE,
     CP_MOD_DEPTH,
     CP_MOD_RATE,
     CP_HCF_PRE_ON,
@@ -107,7 +108,7 @@ typedef struct {
 * Struct for THE BollieDelayXT instance, the host is going to use.
 */
 typedef struct {
-    double sample_rate;                 ///< Store the current sample reate here
+    double sample_rate;               ///< Current sample rate
 
     float buffer_ch1[MAX_BUF_SIZE];  ///<< delay buffer for channel 1
     float buffer_ch2[MAX_BUF_SIZE];  ///<< delay buffer for channel 2
@@ -121,10 +122,10 @@ typedef struct {
     const float *cp_tempo_div_ch2;
     const float *cp_fb;
     const float *cp_cf;
-    const float *cp_gain_in;
     const float *cp_gain_dry;
     const float *cp_gain_wet;
     const float *cp_mod_on;
+    const float *cp_mod_phase;
     const float *cp_mod_depth;
     const float *cp_mod_rate;
     const float *cp_hcf_pre_on;
@@ -162,18 +163,16 @@ typedef struct {
     float cur_fb;
 
     float cur_cp_gain_dry;
-    float cur_cp_gain_in;
     float cur_cp_gain_wet;
 
     float cur_cp_cf;
     float cur_cp_fb;
 
-    float cur_cp_mod_rate;
-
     float cur_gain_dry;
-    float cur_gain_in;
     float cur_gain_wet;
+    float cur_gain_buf_in;
 
+    float cur_mod_depth;
     float cur_mod_rate;
 
     float cur_tempo;
@@ -193,14 +192,15 @@ typedef struct {
     int fade_length;
     int fade_pos;
 
-    int pos_w;
+    int32_t pos_w;
 
     float tgt_cf;
     float tgt_fb;
 
     float tgt_gain_dry;
-    float tgt_gain_in;
     float tgt_gain_wet;
+
+    float lfo_table[LFO_TABLEN + 1];
     
 } BollieDelayXT;
 
@@ -222,8 +222,17 @@ static LV2_Handle instantiate(const LV2_Descriptor * descriptor, double rate,
     self->fade_length = ceil(rate / 1000 * FADE_LENGTH_MS);
     self->fade_pos = 0;
 
-    // Prepare the LFO increment based on sample rate - 1 Hz
-    self->lfo_circle = TWO_PI / rate;
+    /* Prepare LFO table */
+    self->lfo_circle = LFO_TABLEN / rate;
+    double step = TWO_PI / LFO_TABLEN;
+
+    int i;
+    for (i = 0 ; i < LFO_TABLEN ; ++i) {
+        self->lfo_table[i] = sin(step * i);
+    }
+
+    // Copy first value to the last entry
+    self->lfo_table[i] = self->lfo_table[0];
 
     return (LV2_Handle)self;
 }
@@ -278,9 +287,6 @@ static void connect_port(LV2_Handle instance, uint32_t port, void *data) {
         case CP_CF:
             self->cp_cf = data;
             break;
-        case CP_GAIN_IN:
-            self->cp_gain_in = data;
-            break;
         case CP_GAIN_DRY:
             self->cp_gain_dry = data;
             break;
@@ -289,6 +295,9 @@ static void connect_port(LV2_Handle instance, uint32_t port, void *data) {
             break;
         case CP_MOD_ON:
             self->cp_mod_on = data;
+            break;
+        case CP_MOD_PHASE:
+            self->cp_mod_phase = data;
             break;
         case CP_MOD_DEPTH:
             self->cp_mod_depth = data;
@@ -348,21 +357,20 @@ static void activate(LV2_Handle instance) {
     self->state = FILL_BUF;
     self->pos_w = 0;
     self->fade_pos = 0;
-    self->cur_cp_gain_in = -97.f;
     self->cur_cp_gain_dry = -97.f;
     self->cur_cp_gain_wet = -97.f;
     self->cur_cp_cf = -97;
     self->cur_cp_fb = -97;
-    self->cur_cp_mod_rate = 0;
-    self->cur_gain_in = 0;
     self->cur_gain_dry = 0;
     self->cur_gain_wet = 0;
+    self->cur_mod_depth = 0;
     self->cur_mod_rate = 0;
     self->cur_cf = 0;
     self->cur_fb = 0;
     self->cur_tempo = 0;
-    self->lfo_cur_phase = 0.0;
-    self->lfo_incr = 0.0;
+    self->lfo_cur_phase = 0;
+    self->lfo_incr = 0;
+    self->cur_gain_buf_in = 0;
 
     bf_init(&self->fil_hcf_fb_ch1);
     bf_init(&self->fil_hcf_fb_ch2);
@@ -441,9 +449,10 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
     float cur_fb = self->cur_fb;
     float cur_d_t_ch1 = self->cur_d_t_ch1;
     float cur_d_t_ch2 = self->cur_d_t_ch2;
-    float cur_gain_in = self->cur_gain_in;
+    float cur_gain_buf_in = self->cur_gain_buf_in;
     float cur_gain_dry = self->cur_gain_dry;
     float cur_gain_wet = self->cur_gain_wet;
+    float cur_mod_depth = self->cur_mod_depth;
     float cur_mod_rate = self->cur_mod_rate;
     float cp_enabled = *self->cp_enabled;
     float cp_hcf_fb_on = *self->cp_hcf_fb_on;
@@ -459,8 +468,10 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
     float cp_lcf_pre_freq = *self->cp_lcf_pre_freq;
     float cp_lcf_pre_q = *self->cp_lcf_pre_q;
     float cp_mod_on = *self->cp_mod_on;
+    float cp_mod_phase = *self->cp_mod_phase;
     float cp_mod_depth = *self->cp_mod_depth;
     float cp_mod_rate = *self->cp_mod_rate;
+    float cp_trails = *self->cp_trails;
     int fade_pos = self->fade_pos;
     int fade_length = self->fade_length;
     float lfo_circle = self->lfo_circle;
@@ -469,11 +480,11 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
     int pos_w = self->pos_w;
     double rate = self->sample_rate;
     BollieState state = self->state;
-    float tgt_gain_in = self->tgt_gain_in;
     float tgt_gain_dry = self->tgt_gain_dry;
     float tgt_gain_wet = self->tgt_gain_wet;
     float tgt_cf = self->tgt_cf;
     float tgt_fb = self->tgt_fb;
+    float *lfo_table = self->lfo_table;
 
     // Tempo handling
     // Tempo mode has changed
@@ -489,18 +500,6 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
     }
 
     // Gain handling
-    if (*self->cp_gain_in != self->cur_cp_gain_in) {
-        if (*self->cp_gain_in > 12.f) {
-            tgt_gain_in = 4.f;
-        }
-        else if (*self->cp_gain_in < -96.f) {
-            tgt_gain_in = 0;
-        }
-        else {
-            tgt_gain_in = powf(10, (*self->cp_gain_in/20));
-        }
-        self->cur_cp_gain_in = *self->cp_gain_in;
-    } 
     
     if (*self->cp_gain_dry != self->cur_cp_gain_dry) {
         if (*self->cp_gain_dry > 12.f) {
@@ -563,32 +562,48 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
     if (cp_mod_rate < 0.1f || cp_mod_depth > 5.f)
         cp_mod_rate = 0.1f;
 
+    // User disabled the plugin, fade out
+    if (!cp_enabled && state != FADE_OUT_DONE && !cp_trails)
+        state = FADE_OUT;
+
     // Loop over the block of audio we got
     for (unsigned int i = 0 ; i < n_samples ; ++i) {
 
+        /* Shortcut here, if the user has disabled the plugin
+           This is not relevant for trail mode*/
+        if (!cp_enabled && state == FADE_OUT_DONE) {
+            cur_gain_dry = 0.01f + cur_gain_dry * 0.99f;
+            self->output_ch1[i] = self->input_ch1[i] * cur_gain_dry;
+            self->output_ch2[i] = self->input_ch2[i] * cur_gain_dry;
+            continue;
+        }
+
         // Parameter smoothing
-        cur_gain_in = tgt_gain_in * 0.01f + cur_gain_in * 0.99f;
+        cur_gain_buf_in = (!cp_enabled && cp_trails ? 0 : 0.01f) 
+            + cur_gain_buf_in * 0.99f;
         cur_gain_dry = tgt_gain_dry * 0.01f + cur_gain_dry * 0.99f;
         cur_gain_wet = tgt_gain_wet * 0.01f + cur_gain_wet * 0.99f;
         cur_cf = tgt_cf * 0.01f + cur_cf * 0.99f;
         cur_fb = tgt_fb * 0.01f + cur_fb * 0.99f;
+        cur_mod_depth = cp_mod_depth * 0.01f + cur_mod_depth * 0.99f;
 
         // Keep the LFO running
         float lfo_offset = 0;
         if (cp_mod_on) {
-            float lfo_coeff = (float)sin(lfo_cur_phase);
-            lfo_offset = (cp_mod_depth / 1000 * rate) * lfo_coeff;
+            double x1;
+            double frac = modf(lfo_cur_phase, &x1);
+            int x2 = x1+1;
             if (cur_mod_rate != cp_mod_rate) {
                 cur_mod_rate = cp_mod_rate;
                 lfo_incr = lfo_circle * cur_mod_rate;
             }
+            float lfo_coeff = lfo_table[(int)x1] + 
+                frac * (lfo_table[x2] - lfo_table[(int)x1]);
+
             lfo_cur_phase += lfo_incr;
-            if (lfo_cur_phase >= TWO_PI) {
-                lfo_cur_phase -= TWO_PI;
-            }
-            else if(lfo_cur_phase < 0.0) {
-                lfo_cur_phase += TWO_PI;
-            }
+            while (lfo_cur_phase >= LFO_TABLEN) lfo_cur_phase -= LFO_TABLEN;
+            while (lfo_cur_phase < 0.0f) lfo_cur_phase += LFO_TABLEN;
+            lfo_offset = (cur_mod_depth / 1000 * rate) * lfo_coeff;
         }
 
         // Store old samples here
@@ -596,8 +611,8 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
         float old_s_ch2 = 0;
 
         // Current samples
-        float cur_s_ch1 = self->input_ch1[i] * cur_gain_in;
-        float cur_s_ch2 = self->input_ch2[i] * cur_gain_in;
+        float cur_s_ch1 = self->input_ch1[i];
+        float cur_s_ch2 = self->input_ch2[i];
 
         // Gain coefficient used while fading
         float fade_coeff = 0;
@@ -669,7 +684,7 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
             if (x < 0) x = MAX_BUF_SIZE + x;
             old_s_ch2 = interpolate(self->buffer_ch2, x) * fade_coeff;
 
-            // High pass filter on feedback
+            // High cut filter on feedback
             if (cp_hcf_fb_on) {
                 old_s_ch1 = bf_hcf(old_s_ch1, cp_hcf_fb_freq, cp_hcf_fb_q, rate,
                     &self->fil_hcf_fb_ch1);
@@ -677,7 +692,7 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
                     &self->fil_hcf_fb_ch2);
             }
 
-            // Low pass filter on feedback
+            // Low cut filter on feedback
             if (cp_lcf_fb_on) {
                 old_s_ch1 = bf_lcf(old_s_ch1, cp_lcf_fb_freq, cp_lcf_fb_q, rate,
                     &self->fil_lcf_fb_ch1);
@@ -704,15 +719,17 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
         }
 
         /* Summing for the delay lines */
-        self->buffer_ch1[pos_w] = cur_fil_s_ch1 
+        self->buffer_ch1[pos_w] = cur_gain_buf_in * (
+            cur_fil_s_ch1 
             + old_s_ch1 * cur_fb
             + old_s_ch2 * cur_cf
-        ;
+        );
         
-        self->buffer_ch2[pos_w] = cur_fil_s_ch2
+        self->buffer_ch2[pos_w] = cur_gain_buf_in * (
+            cur_fil_s_ch2
             + old_s_ch2 * cur_fb
             + old_s_ch1 * cur_cf
-        ;
+        );
         
         // Final summing
         self->output_ch1[i] = cur_s_ch1 * cur_gain_dry 
@@ -729,16 +746,16 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
     self->cur_d_t_ch2 = cur_d_t_ch2;
     self->cur_fb = cur_fb;
     self->cur_cf = cur_cf;
+    self->cur_gain_buf_in = cur_gain_buf_in;
     self->cur_gain_dry = cur_gain_dry;
-    self->cur_gain_in = cur_gain_in;
     self->cur_gain_wet = cur_gain_wet;
+    self->cur_mod_depth = cur_mod_depth;
     self->cur_mod_rate = cur_mod_rate;
     self->fade_pos = fade_pos;
     self->lfo_cur_phase = lfo_cur_phase;
     self->lfo_incr = lfo_incr;
     self->pos_w = pos_w;
     self->state = state;
-    self->tgt_gain_in = tgt_gain_in;
     self->tgt_gain_dry = tgt_gain_dry;
     self->tgt_gain_wet = tgt_gain_wet;
     self->tgt_cf = tgt_cf;
