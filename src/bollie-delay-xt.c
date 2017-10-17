@@ -437,11 +437,11 @@ static float interpolate(float *buf, float pos) {
     double x1, frac;
     frac = modf(pos, &x1);
     if (frac == 0) {
-        return buf[(int)x1];
+        return buf[(int32_t)x1];
     }
     
-    float a1 = buf[(int)x1];
-    int x2 = (int)x1+1;
+    float a1 = buf[(int32_t)x1];
+    int32_t x2 = (int32_t)x1+1;
     float a2 = buf[x2 >= MAX_BUF_SIZE ? 0 : x2];
     return a1 + (a2-a1)/(x2-x1) * (pos-x1);
 }
@@ -648,8 +648,8 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
                 cur_mod_rate = cp_mod_rate;
                 lfo_incr = lfo_circle * cur_mod_rate;
             }
-            float lfo_coeff = lfo_table[(int)x1] + 
-                frac * (lfo_table[x2] - lfo_table[(int)x1]);
+            float lfo_coeff = lfo_table[(int32_t)x1] + 
+                frac * (lfo_table[x2] - lfo_table[(int32_t)x1]);
 
             lfo_cur_phase += lfo_incr;
 
