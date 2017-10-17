@@ -24,10 +24,9 @@
 * \brief An LV2 tempo delay plugin with filters and tapping.
 */
 
-#include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
-#include <sys/time.h>
+#include <string.h>
 #include "bolliefilter.h"
 
 #include "lv2/lv2plug.in/ns/lv2core/lv2.h"
@@ -528,6 +527,7 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
         self->cur_tempo = cur_tempo;
         self->cur_tempo_div_ch1 = *self->cp_tempo_div_ch1;
         self->cur_tempo_div_ch2 = *self->cp_tempo_div_ch2;
+        *self->cp_cur_tempo = cur_tempo;
     }
 
     // Gain handling
@@ -616,6 +616,9 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
                 continue;
             }
             else {
+                pos_w = 0;
+                memset(self->buffer_ch1, 0, MAX_BUF_SIZE * sizeof(float));
+                memset(self->buffer_ch2, 0, MAX_BUF_SIZE * sizeof(float));
                 state = FADE_IN;
             }
         }
