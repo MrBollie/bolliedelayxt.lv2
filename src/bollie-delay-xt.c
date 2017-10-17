@@ -195,6 +195,9 @@ typedef struct {
     int32_t pos_w;
     uint32_t mod_offset_samples;
 
+    float tgt_d_t_ch1;
+    float tgt_d_t_ch2;
+
     float tgt_cf;
     float tgt_fb;
 
@@ -360,7 +363,7 @@ static void connect_port(LV2_Handle instance, uint32_t port, void *data) {
 */
 static void activate(LV2_Handle instance) {
     BollieDelayXT* self = (BollieDelayXT*)instance;
-    self->state = FILL_BUF;
+    self->state = FADE_IN;
     self->pos_w = 0;
     self->fade_pos = 0;
     self->cur_cp_gain_dry = -97.f;
@@ -378,6 +381,10 @@ static void activate(LV2_Handle instance) {
     self->lfo_cur_phase = 0;
     self->lfo_incr = 0;
     self->cur_gain_buf_in = 0;
+    self->tgt_d_t_ch1 = 0.5f * self->sample_rate;
+    self->cur_d_t_ch1 = 0;
+    self->tgt_d_t_ch2 = 0.5f * self->sample_rate;
+    self->cur_d_t_ch2 = 0;
 
     bf_init(&self->fil_hcf_fb_ch1);
     bf_init(&self->fil_hcf_fb_ch2);
@@ -487,6 +494,8 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
     int pos_w = self->pos_w;
     double rate = self->sample_rate;
     BollieState state = self->state;
+    float tgt_d_t_ch1 = self->tgt_d_t_ch1;
+    float tgt_d_t_ch2 = self->tgt_d_t_ch2;
     float tgt_gain_dry = self->tgt_gain_dry;
     float tgt_gain_wet = self->tgt_gain_wet;
     float tgt_cf = self->tgt_cf;
@@ -503,7 +512,22 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
         || self->cur_tempo_div_ch1 != *self->cp_tempo_div_ch1
         || self->cur_tempo_div_ch2 != *self->cp_tempo_div_ch2
     ) {
-        state = FADE_OUT;
+        tgt_d_t_ch1 = calc_delay_samples(self, cur_tempo, 
+            *self->cp_tempo_div_ch1);
+
+        tgt_d_t_ch2 = calc_delay_samples(self, cur_tempo, 
+            *self->cp_tempo_div_ch2);
+/*
+            // Safety!
+            if (cur_d_t_ch1 + self->mod_offset_samples + 1.f > MAX_BUF_SIZE) 
+                cur_d_t_ch1 = MAX_BUF_SIZE-self->mod_offset_samples-1.f;
+
+            if (cur_d_t_ch2 + self->mod_offset_samples + 1.f > MAX_BUF_SIZE)
+                cur_d_t_ch2 = MAX_BUF_SIZE-self->mod_offset_samples-1.f;
+*/
+        self->cur_tempo = cur_tempo;
+        self->cur_tempo_div_ch1 = *self->cp_tempo_div_ch1;
+        self->cur_tempo_div_ch2 = *self->cp_tempo_div_ch2;
     }
 
     // Gain handling
@@ -584,11 +608,16 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
 
         /* Shortcut here, if the user has disabled the plugin
            This is not relevant for trail mode*/
-        if (!cp_enabled && state == FADE_OUT_DONE) {
-            cur_gain_dry = 0.01f + cur_gain_dry * 0.99f;
-            self->output_ch1[i] = self->input_ch1[i] * cur_gain_dry;
-            self->output_ch2[i] = self->input_ch2[i] * cur_gain_dry;
-            continue;
+        if (state == FADE_OUT_DONE) {
+            if (!cp_enabled) {
+                cur_gain_dry = 0.01f + cur_gain_dry * 0.99f;
+                self->output_ch1[i] = self->input_ch1[i] * cur_gain_dry;
+                self->output_ch2[i] = self->input_ch2[i] * cur_gain_dry;
+                continue;
+            }
+            else {
+                state = FADE_IN;
+            }
         }
 
         // Parameter smoothing
@@ -600,6 +629,9 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
         cur_fb = tgt_fb * 0.01f + cur_fb * 0.99f;
         cur_mod_depth = (cp_mod_on ? cp_mod_depth : 0) * 0.01f 
             + cur_mod_depth * 0.99f;
+
+        cur_d_t_ch1 = tgt_d_t_ch1 * 0.001f + cur_d_t_ch1 * 0.999f;
+        cur_d_t_ch2 = tgt_d_t_ch2 * 0.001f + cur_d_t_ch2 * 0.999f;
 
         // Keep the LFO running
         float lfo_offset_ch1 = 0;
@@ -647,32 +679,7 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
         // Gain coefficient used while fading
         float fade_coeff = 0;
 
-        // Fade out is done, time for tempo change
-        if (state == FADE_OUT_DONE) {
-            // Memorize current settings
-            self->cur_tempo = cur_tempo;
-            self->cur_tempo_div_ch1 = *self->cp_tempo_div_ch1;
-            self->cur_tempo_div_ch2 = *self->cp_tempo_div_ch2;
-
-            // Calculate sample offset and memorize it
-            cur_d_t_ch1 = calc_delay_samples(self, cur_tempo, 
-                self->cur_tempo_div_ch1);
-            cur_d_t_ch2 = calc_delay_samples(self, cur_tempo, 
-                self->cur_tempo_div_ch2);
-
-            // Safety!
-            if (cur_d_t_ch1 + self->mod_offset_samples + 1.f > MAX_BUF_SIZE) 
-                cur_d_t_ch1 = MAX_BUF_SIZE-self->mod_offset_samples-1.f;
-
-            if (cur_d_t_ch2 + self->mod_offset_samples + 1.f > MAX_BUF_SIZE)
-                cur_d_t_ch2 = MAX_BUF_SIZE-self->mod_offset_samples-1.f;
-
-            pos_w = 0;
-
-            *self->cp_tempo_out = cur_tempo;
-            state = FILL_BUF;
-        }
-        else if (state == FADE_OUT) {
+        if (state == FADE_OUT) {
             if (fade_pos > 0) { 
                fade_coeff = --fade_pos * (1/(float)fade_length); 
             }
@@ -687,13 +694,6 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
             else {
                 state = CYCLE;
                 fade_coeff = 1;
-            }
-        }
-        else if (state == FILL_BUF) {
-            // Fade in not before enough samples are in the buffer
-            if ((float)pos_w >= cur_d_t_ch1 + self->mod_offset_samples 
-                && (float)pos_w >= cur_d_t_ch2 + self->mod_offset_samples) {
-                state = FADE_IN;
             }
         }
         else {
@@ -790,6 +790,8 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
     self->lfo_incr = lfo_incr;
     self->pos_w = pos_w;
     self->state = state;
+    self->tgt_d_t_ch1 = tgt_d_t_ch1;
+    self->tgt_d_t_ch2 = tgt_d_t_ch2;
     self->tgt_gain_dry = tgt_gain_dry;
     self->tgt_gain_wet = tgt_gain_wet;
     self->tgt_cf = tgt_cf;
