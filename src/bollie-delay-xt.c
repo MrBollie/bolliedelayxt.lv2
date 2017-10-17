@@ -25,6 +25,7 @@
 */
 
 #include <stdlib.h>
+#include <stdio.h>
 #include <math.h>
 #include <string.h>
 #include "bolliefilter.h"
@@ -181,21 +182,21 @@ typedef struct {
     float cur_tempo_div_ch1;
     float cur_tempo_div_ch2;
 
-    double cur_d_t_ch1;
-    double cur_d_t_ch2;
+    float cur_d_t_ch1;
+    float cur_d_t_ch2;
 
     double lfo_circle;
     double lfo_cur_phase;
     double lfo_incr;
 
-    int fade_length;
-    int fade_pos;
+    int32_t fade_length;
+    int32_t fade_pos;
 
     int32_t pos_w;
     uint32_t mod_offset_samples;
 
-    double tgt_d_t_ch1;
-    double tgt_d_t_ch2;
+    float tgt_d_t_ch1;
+    float tgt_d_t_ch2;
 
     float tgt_cf;
     float tgt_fb;
@@ -439,11 +440,12 @@ static float interpolate(float *buf, float pos) {
     if (frac == 0) {
         return buf[(int32_t)x1];
     }
-    
-    float a1 = buf[(int32_t)x1];
     int32_t x2 = (int32_t)x1+1;
+    float a1 = buf[(int32_t)x1];
     float a2 = buf[x2 >= MAX_BUF_SIZE ? 0 : x2];
-    return a1 + (a2-a1)/(x2-x1) * (pos-x1);
+    //return a1 * (x2-pos) + a2 * frac/(x2-x1);
+    return a1  + frac * (a2-a1);
+    //return a1 + (a2-a1)/(x2-x1) * (pos-x1);
 }
 
 
@@ -458,8 +460,8 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
     // Localize
     float cur_cf = self->cur_cf;
     float cur_fb = self->cur_fb;
-    double cur_d_t_ch1 = self->cur_d_t_ch1;
-    double cur_d_t_ch2 = self->cur_d_t_ch2;
+    float cur_d_t_ch1 = self->cur_d_t_ch1;
+    float cur_d_t_ch2 = self->cur_d_t_ch2;
     float cur_gain_buf_in = self->cur_gain_buf_in;
     float cur_gain_dry = self->cur_gain_dry;
     float cur_gain_wet = self->cur_gain_wet;
@@ -644,12 +646,18 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
             double x1;
             double frac = modf(lfo_cur_phase, &x1);
             int32_t x2 = x1+1;
+            double a1 = lfo_table[(int32_t)x1];
+            double a2 = lfo_table[(int32_t)x2];
             if (cur_mod_rate != cp_mod_rate) {
                 cur_mod_rate = cp_mod_rate;
                 lfo_incr = lfo_circle * cur_mod_rate;
             }
-            float lfo_coeff = lfo_table[(int32_t)x1] + 
-                frac * (lfo_table[x2] - lfo_table[(int32_t)x1]);
+            float lfo_coeff = a1 + frac * (a2-a1);
+
+            if (lfo_coeff > 1.0f || lfo_coeff < -1.0f || x1 >= LFO_TABLEN ||
+                x1 < 0) {
+                printf("lfo_coeff %.02f x1 %.02f\n", lfo_coeff, x1);
+            }
 
             lfo_cur_phase += lfo_incr;
 
@@ -716,12 +724,12 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
         // In this states, we'll retrieve old samples, interpolate if needed
         if (state == FADE_IN || state == FADE_OUT || state == CYCLE) {
             // Channel 1
-            double x = (double)pos_w - cur_d_t_ch1 + lfo_offset_ch1; 
+            float x = (float)pos_w - cur_d_t_ch1 + lfo_offset_ch1; 
             if (x < 0) x = MAX_BUF_SIZE + x;
             old_s_ch1 = interpolate(self->buffer_ch1, x) * fade_coeff;
 
             // Channel 2
-            x = (double)pos_w - cur_d_t_ch2 + lfo_offset_ch2; 
+            x = (float)pos_w - cur_d_t_ch2 + lfo_offset_ch2; 
             if (x < 0) x = MAX_BUF_SIZE + x;
             old_s_ch2 = interpolate(self->buffer_ch2, x) * fade_coeff;
 
