@@ -535,18 +535,24 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
     } 
     
     // Feedback
-    if (*self->cp_fb != self->cur_cp_fb) {
-        if (*self->cp_fb > 12.f ) {
-            tgt_fb = 4.f;
+    if (!cp_ping_pong) {
+        if (*self->cp_fb != self->cur_cp_fb) {
+            if (*self->cp_fb > 12.f ) {
+                tgt_fb = 4.f;
+            }
+            else if (*self->cp_fb < -96.f) {
+                tgt_fb = 0;
+            }
+            else {
+                tgt_fb = powf(10, (*self->cp_fb/20));
+            }
+            self->cur_cp_fb = *self->cp_fb;
         }
-        else if (*self->cp_fb < -96.f) {
-            tgt_fb = 0;
-        }
-        else {
-            tgt_fb = powf(10, (*self->cp_fb/20));
-        }
-        self->cur_cp_fb = *self->cp_fb;
     } 
+    else {
+        // ping pong mode. We don't want any FB here
+        tgt_fb = 0;
+    }
     
     // Crossfeed
     if (*self->cp_cf != self->cur_cp_cf) {
@@ -741,18 +747,25 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
         }
 
         /* Summing for the delay lines */
-        self->buffer_ch1[pos_w] = cur_gain_buf_in * (
-            cur_fil_s_ch1 
-            + old_s_ch1 * cur_fb
-            + old_s_ch2 * cur_cf
-        );
-        
-        self->buffer_ch2[pos_w] = cur_gain_buf_in * (
-            cur_fil_s_ch2
-            + old_s_ch2 * cur_fb
-            + old_s_ch1 * cur_cf
-        );
-        
+        if (cp_ping_pong) {
+            self->buffer_ch1[pos_w] = cur_gain_buf_in 
+                * (cur_fil_s_ch1 * 0.5f + cur_fil_s_ch2 * 0.5f)
+                + old_s_ch2 * cur_cf
+            ;
+            self->buffer_ch2[pos_w] = old_s_ch1 * cur_cf;
+        }
+        else {
+            self->buffer_ch1[pos_w] = cur_gain_buf_in * cur_fil_s_ch1 
+                + old_s_ch1 * cur_fb
+                + old_s_ch2 * cur_cf
+            ;
+
+            self->buffer_ch2[pos_w] = cur_gain_buf_in * cur_fil_s_ch2
+                + old_s_ch2 * cur_fb
+                + old_s_ch1 * cur_cf
+            ;
+        }
+
         // Final summing
         self->output_ch1[i] = cur_s_ch1 * cur_gain_dry 
             + old_s_ch1 * cur_gain_wet;
