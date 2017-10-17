@@ -362,7 +362,7 @@ static void connect_port(LV2_Handle instance, uint32_t port, void *data) {
 */
 static void activate(LV2_Handle instance) {
     BollieDelayXT* self = (BollieDelayXT*)instance;
-    self->state = FADE_IN;
+    self->state = FILL_BUF;
     self->pos_w = 0;
     self->fade_pos = 0;
     self->cur_cp_gain_dry = -97.f;
@@ -527,7 +527,7 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
         self->cur_tempo = cur_tempo;
         self->cur_tempo_div_ch1 = *self->cp_tempo_div_ch1;
         self->cur_tempo_div_ch2 = *self->cp_tempo_div_ch2;
-        *self->cp_cur_tempo = cur_tempo;
+        *self->cp_tempo_out = cur_tempo;
     }
 
     // Gain handling
@@ -619,7 +619,7 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
                 pos_w = 0;
                 memset(self->buffer_ch1, 0, MAX_BUF_SIZE * sizeof(float));
                 memset(self->buffer_ch2, 0, MAX_BUF_SIZE * sizeof(float));
-                state = FADE_IN;
+                state = FILL_BUF;
             }
         }
 
@@ -690,16 +690,26 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
                 state = FADE_OUT_DONE;
             }
         }
+        else if (state == FILL_BUF) {
+            // Change to state fade in, when the buffer is full enough
+            if ((float)pos_w > cur_d_t_ch1 + self->mod_offset_samples
+                && (float)pos_w > cur_d_t_ch2 + self->mod_offset_samples) {
+                state = FADE_IN;
+            }
+        }
         else if (state == FADE_IN) {
             if (fade_pos < fade_length) {
+                // Keep fading
                 fade_coeff = fade_pos++ * (1/(float)fade_length);
             }
             else {
+                // fade is done, let's cycle. ;)
                 state = CYCLE;
                 fade_coeff = 1;
             }
         }
         else {
+            // default
             fade_coeff = 1;
         }
 
