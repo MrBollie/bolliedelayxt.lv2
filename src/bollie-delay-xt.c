@@ -39,7 +39,7 @@
 #define MAX_BUF_SIZE 1930000
 #define FADE_LENGTH_MS 50
 #define LFO_TABLEN (1024)
-
+#define MOD_OFFSET_MS 5.f
 
 /**
 * Make a bool type available. ;)
@@ -185,9 +185,6 @@ typedef struct {
     float cur_d_t_ch1;
     float cur_d_t_ch2;
 
-    int cur_d_s_ch1;
-    int cur_d_s_ch2;
-
     double lfo_circle;
     double lfo_cur_phase;
     double lfo_incr;
@@ -196,6 +193,7 @@ typedef struct {
     int fade_pos;
 
     int32_t pos_w;
+    uint32_t mod_offset_samples;
 
     float tgt_cf;
     float tgt_fb;
@@ -236,6 +234,8 @@ static LV2_Handle instantiate(const LV2_Descriptor * descriptor, double rate,
 
     // Copy first value to the last entry
     self->lfo_table[i] = self->lfo_table[0];
+
+    self->mod_offset_samples = ceil(MOD_OFFSET_MS / 1000 * rate);
 
     return (LV2_Handle)self;
 }
@@ -450,8 +450,6 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
     BollieDelayXT* self = (BollieDelayXT*)instance;
 
     // Localize
-    int cur_d_s_ch1 = self->cur_d_s_ch1;
-    int cur_d_s_ch2 = self->cur_d_s_ch2;
     float cur_cf = self->cur_cf;
     float cur_fb = self->cur_fb;
     float cur_d_t_ch1 = self->cur_d_t_ch1;
@@ -565,7 +563,7 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
     } 
 
     // Modulation
-    if (cp_mod_depth < 0.1f || cp_mod_depth > 5.f)
+    if (cp_mod_depth < 0.1f || cp_mod_depth > MOD_OFFSET_MS)
         cp_mod_depth = 2.f;
 
     if (cp_mod_rate < 0.1f || cp_mod_depth > 5.f)
@@ -657,15 +655,11 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
                 self->cur_tempo_div_ch2);
 
             // Safety!
-            if (cur_d_t_ch1 + 1.f > MAX_BUF_SIZE) 
-                cur_d_t_ch1 = MAX_BUF_SIZE-1.f;
+            if (cur_d_t_ch1 + self->mod_offset_samples + 1.f > MAX_BUF_SIZE) 
+                cur_d_t_ch1 = MAX_BUF_SIZE-self->mod_offset_samples-1.f;
 
-            if (cur_d_t_ch2 + 1.f > MAX_BUF_SIZE)
-                cur_d_t_ch2 = MAX_BUF_SIZE-1.f;
-
-            // The buffer is integer, so make sure, it is big enough.
-            cur_d_s_ch1 = ceil(cur_d_t_ch1) + 1;
-            cur_d_s_ch2 = ceil(cur_d_t_ch2) + 1;
+            if (cur_d_t_ch2 + self->mod_offset_samples + 1.f > MAX_BUF_SIZE)
+                cur_d_t_ch2 = MAX_BUF_SIZE-self->mod_offset_samples-1.f;
 
             pos_w = 0;
 
@@ -690,7 +684,9 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
             }
         }
         else if (state == FILL_BUF) {
-            if (pos_w >= cur_d_s_ch1 && pos_w >= cur_d_s_ch2) {
+            // Fade in not before enough samples are in the buffer
+            if ((float)pos_w >= cur_d_t_ch1 + self->mod_offset_samples 
+                && (float)pos_w >= cur_d_t_ch2 + self->mod_offset_samples) {
                 state = FADE_IN;
             }
         }
@@ -766,8 +762,6 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
         pos_w = pos_w + 1 >= MAX_BUF_SIZE ? 0 : pos_w + 1;        
     }
 
-    self->cur_d_s_ch1 = cur_d_s_ch1;
-    self->cur_d_s_ch2 = cur_d_s_ch2;
     self->cur_d_t_ch1 = cur_d_t_ch1;
     self->cur_d_t_ch2 = cur_d_t_ch2;
     self->cur_fb = cur_fb;
