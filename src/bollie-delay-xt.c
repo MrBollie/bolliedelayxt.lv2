@@ -176,6 +176,7 @@ typedef struct {
 
     float cur_mod_depth;
     float cur_mod_rate;
+    float cur_mod_phase;
 
     float cur_tempo;
     float cur_tempo_div_ch1;
@@ -370,6 +371,7 @@ static void activate(LV2_Handle instance) {
     self->cur_gain_wet = 0;
     self->cur_mod_depth = 0;
     self->cur_mod_rate = 0;
+    self->cur_mod_phase = 0;
     self->cur_cf = 0;
     self->cur_fb = 0;
     self->cur_tempo = 0;
@@ -458,6 +460,7 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
     float cur_gain_dry = self->cur_gain_dry;
     float cur_gain_wet = self->cur_gain_wet;
     float cur_mod_depth = self->cur_mod_depth;
+    float cur_mod_phase = self->cur_mod_phase;
     float cur_mod_rate = self->cur_mod_rate;
     float cp_enabled = *self->cp_enabled;
     float cp_ping_pong = *self->cp_ping_pong;
@@ -594,8 +597,10 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
         cur_mod_depth = cp_mod_depth * 0.01f + cur_mod_depth * 0.99f;
 
         // Keep the LFO running
-        float lfo_offset = 0;
+        float lfo_offset_ch1 = 0;
+        float lfo_offset_ch2 = 0;
         if (cp_mod_on) {
+            // Here we do a table lookup and linear interpolation
             double x1;
             double frac = modf(lfo_cur_phase, &x1);
             int x2 = x1+1;
@@ -607,9 +612,20 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
                 frac * (lfo_table[x2] - lfo_table[(int)x1]);
 
             lfo_cur_phase += lfo_incr;
+
+            // A chance to do desired phase switching
+            if (lfo_cur_phase >= LFO_TABLEN || lfo_cur_phase < 0.0f) {
+                cur_mod_phase = cp_mod_phase;    
+            }
+
             while (lfo_cur_phase >= LFO_TABLEN) lfo_cur_phase -= LFO_TABLEN;
             while (lfo_cur_phase < 0.0f) lfo_cur_phase += LFO_TABLEN;
-            lfo_offset = (cur_mod_depth / 1000 * rate) * lfo_coeff;
+            lfo_offset_ch1 = (cur_mod_depth / 1000 * rate) * lfo_coeff;
+
+            // In case the user desires a phase switch, then turn the ch2 by
+            // 180 degrees
+            lfo_offset_ch2 = 
+                cur_mod_phase ? lfo_offset_ch1 * -1 : lfo_offset_ch1;
         }
 
         // Store old samples here
@@ -681,12 +697,12 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
         // In this states, we'll retrieve old samples, interpolate if needed
         if (state == FADE_IN || state == FADE_OUT || state == CYCLE) {
             // Channel 1
-            float x = (float)pos_w - cur_d_t_ch1 + lfo_offset; 
+            float x = (float)pos_w - cur_d_t_ch1 + lfo_offset_ch1; 
             if (x < 0) x = MAX_BUF_SIZE + x;
             old_s_ch1 = interpolate(self->buffer_ch1, x) * fade_coeff;
 
             // Channel 2
-            x = (float)pos_w - cur_d_t_ch2 + lfo_offset; 
+            x = (float)pos_w - cur_d_t_ch2 + lfo_offset_ch2; 
             if (x < 0) x = MAX_BUF_SIZE + x;
             old_s_ch2 = interpolate(self->buffer_ch2, x) * fade_coeff;
 
@@ -757,6 +773,7 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
     self->cur_gain_wet = cur_gain_wet;
     self->cur_mod_depth = cur_mod_depth;
     self->cur_mod_rate = cur_mod_rate;
+    self->cur_mod_phase = cur_mod_phase;
     self->fade_pos = fade_pos;
     self->lfo_cur_phase = lfo_cur_phase;
     self->lfo_incr = lfo_incr;
