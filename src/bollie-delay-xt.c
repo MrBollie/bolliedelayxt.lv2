@@ -594,12 +594,13 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
         cur_gain_wet = tgt_gain_wet * 0.01f + cur_gain_wet * 0.99f;
         cur_cf = tgt_cf * 0.01f + cur_cf * 0.99f;
         cur_fb = tgt_fb * 0.01f + cur_fb * 0.99f;
-        cur_mod_depth = cp_mod_depth * 0.01f + cur_mod_depth * 0.99f;
+        cur_mod_depth = (cp_mod_on ? cp_mod_depth : 0) * 0.01f 
+            + cur_mod_depth * 0.99f;
 
         // Keep the LFO running
         float lfo_offset_ch1 = 0;
         float lfo_offset_ch2 = 0;
-        if (cp_mod_on) {
+        if (cur_mod_depth > 0) {
             // Here we do a table lookup and linear interpolation
             double x1;
             double frac = modf(lfo_cur_phase, &x1);
@@ -626,6 +627,9 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
             // 180 degrees
             lfo_offset_ch2 = 
                 cur_mod_phase ? lfo_offset_ch1 * -1 : lfo_offset_ch1;
+        }
+        else {
+            lfo_cur_phase = 0;
         }
 
         // Store old samples here
