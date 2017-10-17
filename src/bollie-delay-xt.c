@@ -181,8 +181,8 @@ typedef struct {
     float cur_tempo_div_ch1;
     float cur_tempo_div_ch2;
 
-    float cur_d_t_ch1;
-    float cur_d_t_ch2;
+    double cur_d_t_ch1;
+    double cur_d_t_ch2;
 
     double lfo_circle;
     double lfo_cur_phase;
@@ -194,8 +194,8 @@ typedef struct {
     int32_t pos_w;
     uint32_t mod_offset_samples;
 
-    float tgt_d_t_ch1;
-    float tgt_d_t_ch2;
+    double tgt_d_t_ch1;
+    double tgt_d_t_ch2;
 
     float tgt_cf;
     float tgt_fb;
@@ -203,7 +203,7 @@ typedef struct {
     float tgt_gain_dry;
     float tgt_gain_wet;
 
-    float lfo_table[LFO_TABLEN + 1];
+    double lfo_table[LFO_TABLEN + 1];
     
 } BollieDelayXT;
 
@@ -458,8 +458,8 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
     // Localize
     float cur_cf = self->cur_cf;
     float cur_fb = self->cur_fb;
-    float cur_d_t_ch1 = self->cur_d_t_ch1;
-    float cur_d_t_ch2 = self->cur_d_t_ch2;
+    double cur_d_t_ch1 = self->cur_d_t_ch1;
+    double cur_d_t_ch2 = self->cur_d_t_ch2;
     float cur_gain_buf_in = self->cur_gain_buf_in;
     float cur_gain_dry = self->cur_gain_dry;
     float cur_gain_wet = self->cur_gain_wet;
@@ -485,12 +485,12 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
     float cp_mod_depth = *self->cp_mod_depth;
     float cp_mod_rate = *self->cp_mod_rate;
     float cp_trails = *self->cp_trails;
-    int fade_pos = self->fade_pos;
-    int fade_length = self->fade_length;
-    float lfo_circle = self->lfo_circle;
-    float lfo_cur_phase = self->lfo_cur_phase;
-    float lfo_incr = self->lfo_incr;
-    int pos_w = self->pos_w;
+    int32_t fade_pos = self->fade_pos;
+    int32_t fade_length = self->fade_length;
+    double lfo_circle = self->lfo_circle;
+    double lfo_cur_phase = self->lfo_cur_phase;
+    double lfo_incr = self->lfo_incr;
+    int32_t pos_w = self->pos_w;
     double rate = self->sample_rate;
     BollieState state = self->state;
     float tgt_d_t_ch1 = self->tgt_d_t_ch1;
@@ -499,7 +499,7 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
     float tgt_gain_wet = self->tgt_gain_wet;
     float tgt_cf = self->tgt_cf;
     float tgt_fb = self->tgt_fb;
-    float *lfo_table = self->lfo_table;
+    const double *lfo_table = self->lfo_table;
 
     // Tempo handling
     // Tempo mode has changed
@@ -604,7 +604,7 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
         state = FADE_OUT;
 
     // Loop over the block of audio we got
-    for (unsigned int i = 0 ; i < n_samples ; ++i) {
+    for (uint32_t i = 0 ; i < n_samples ; ++i) {
 
         /* Shortcut here, if the user has disabled the plugin
            This is not relevant for trail mode*/
@@ -643,7 +643,7 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
             // Here we do a table lookup and linear interpolation
             double x1;
             double frac = modf(lfo_cur_phase, &x1);
-            int x2 = x1+1;
+            int32_t x2 = x1+1;
             if (cur_mod_rate != cp_mod_rate) {
                 cur_mod_rate = cp_mod_rate;
                 lfo_incr = lfo_circle * cur_mod_rate;
@@ -692,8 +692,8 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
         }
         else if (state == FILL_BUF) {
             // Change to state fade in, when the buffer is full enough
-            if ((float)pos_w > cur_d_t_ch1 + self->mod_offset_samples
-                && (float)pos_w > cur_d_t_ch2 + self->mod_offset_samples) {
+            if ((double)pos_w > cur_d_t_ch1 + self->mod_offset_samples
+                && (double)pos_w > cur_d_t_ch2 + self->mod_offset_samples) {
                 state = FADE_IN;
             }
         }
@@ -716,12 +716,12 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
         // In this states, we'll retrieve old samples, interpolate if needed
         if (state == FADE_IN || state == FADE_OUT || state == CYCLE) {
             // Channel 1
-            float x = (float)pos_w - cur_d_t_ch1 + lfo_offset_ch1; 
+            double x = (double)pos_w - cur_d_t_ch1 + lfo_offset_ch1; 
             if (x < 0) x = MAX_BUF_SIZE + x;
             old_s_ch1 = interpolate(self->buffer_ch1, x) * fade_coeff;
 
             // Channel 2
-            x = (float)pos_w - cur_d_t_ch2 + lfo_offset_ch2; 
+            x = (double)pos_w - cur_d_t_ch2 + lfo_offset_ch2; 
             if (x < 0) x = MAX_BUF_SIZE + x;
             old_s_ch2 = interpolate(self->buffer_ch2, x) * fade_coeff;
 
