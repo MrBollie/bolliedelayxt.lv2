@@ -439,15 +439,10 @@ static float calc_delay_samples(BollieDelayXT* self, float tempo, int div) {
 static float interpolate(float *buf, float pos) {
     double x1, frac;
     frac = modf(pos, &x1);
-    if (frac == 0) {
-        return buf[(int32_t)x1];
-    }
     int32_t x2 = (int32_t)x1+1;
     float a1 = buf[(int32_t)x1];
     float a2 = buf[x2 >= MAX_BUF_SIZE ? 0 : x2];
-    //return a1 * (x2-pos) + a2 * frac/(x2-x1);
     return a1  + frac * (a2-a1);
-    //return a1 + (a2-a1)/(x2-x1) * (pos-x1);
 }
 
 
@@ -727,6 +722,9 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
             x = (float)pos_w - cur_d_t_ch2 + lfo_offset_ch2; 
             if (x < 0) x = MAX_BUF_SIZE + x;
             old_s_ch2 = interpolate(self->buffer_ch2, x) * fade_coeff;
+
+            if (x >= MAX_BUF_SIZE || x < 0) 
+                *self->cp_tempo_out = x;
 
             // High cut filter on feedback
             if (cp_hcf_fb_on) {
