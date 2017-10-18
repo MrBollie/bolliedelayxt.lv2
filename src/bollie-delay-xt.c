@@ -518,14 +518,14 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
 
         tgt_d_t_ch2 = calc_delay_samples(self, cur_tempo, 
             *self->cp_tempo_div_ch2);
-/*
-            // Safety!
-            if (cur_d_t_ch1 + self->mod_offset_samples + 1.f > MAX_BUF_SIZE) 
-                cur_d_t_ch1 = MAX_BUF_SIZE-self->mod_offset_samples-1.f;
 
-            if (cur_d_t_ch2 + self->mod_offset_samples + 1.f > MAX_BUF_SIZE)
-                cur_d_t_ch2 = MAX_BUF_SIZE-self->mod_offset_samples-1.f;
-*/
+        // Safety!
+        if (tgt_d_t_ch1 + self->mod_offset_samples + 1.f > MAX_BUF_SIZE) 
+            tgt_d_t_ch1 = MAX_BUF_SIZE-self->mod_offset_samples-1.f;
+
+        if (tgt_d_t_ch2 + self->mod_offset_samples + 1.f > MAX_BUF_SIZE)
+            tgt_d_t_ch2 = MAX_BUF_SIZE-self->mod_offset_samples-1.f;
+
         self->cur_tempo = cur_tempo;
         self->cur_tempo_div_ch1 = *self->cp_tempo_div_ch1;
         self->cur_tempo_div_ch2 = *self->cp_tempo_div_ch2;
