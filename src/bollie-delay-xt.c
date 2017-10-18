@@ -520,11 +520,11 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
             *self->cp_tempo_div_ch2);
 
         // Safety!
-        if (tgt_d_t_ch1 + self->mod_offset_samples + 1.f > MAX_BUF_SIZE) 
-            tgt_d_t_ch1 = MAX_BUF_SIZE-self->mod_offset_samples-1.f;
+        if (tgt_d_t_ch1 + self->mod_offset_samples >= MAX_BUF_SIZE) 
+            tgt_d_t_ch1 = MAX_BUF_SIZE-self->mod_offset_samples-1;
 
-        if (tgt_d_t_ch2 + self->mod_offset_samples + 1.f > MAX_BUF_SIZE)
-            tgt_d_t_ch2 = MAX_BUF_SIZE-self->mod_offset_samples-1.f;
+        if (tgt_d_t_ch2 + self->mod_offset_samples >= MAX_BUF_SIZE)
+            tgt_d_t_ch2 = MAX_BUF_SIZE-self->mod_offset_samples-1;
 
         self->cur_tempo = cur_tempo;
         self->cur_tempo_div_ch1 = *self->cp_tempo_div_ch1;
@@ -640,7 +640,7 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
         float lfo_offset_ch1 = 0;
         float lfo_offset_ch2 = 0;
         if (cur_mod_depth > 0) {
-            float lfo_coeff = (float)sin(lfo_curphase);
+            float lfo_coeff = sinf(lfo_curphase);
             if (cp_mod_rate != cur_mod_rate) {
                 cur_mod_rate = cp_mod_rate;
                 lfo_incr = self->lfo_circle * cur_mod_rate;
