@@ -38,7 +38,6 @@
 #define TWO_PI (M_PI*2)
 #define MAX_BUF_SIZE 1930000
 #define FADE_LENGTH_MS 50
-#define LFO_TABLEN (1024)
 #define MOD_OFFSET_MS 5.f
 #define LIM_ATTACK 10.f
 #define LIM_RELEASE 10.f
@@ -187,9 +186,9 @@ typedef struct {
     float cur_d_t_ch1;
     float cur_d_t_ch2;
 
-    double lfo_circle;
-    double lfo_cur_phase;
-    double lfo_incr;
+    float lfo_incr;
+    float lfo_curphase;
+    float lfo_circle;
 
     int32_t fade_length;
     int32_t fade_pos;
@@ -205,8 +204,6 @@ typedef struct {
 
     float tgt_gain_dry;
     float tgt_gain_wet;
-
-    double lfo_table[LFO_TABLEN + 1];
 
     float lim_attack;
     float lim_release;
@@ -233,19 +230,10 @@ static LV2_Handle instantiate(const LV2_Descriptor * descriptor, double rate,
     self->fade_length = ceil(rate / 1000 * FADE_LENGTH_MS);
     self->fade_pos = 0;
 
-    /* Prepare LFO table */
-    self->lfo_circle = LFO_TABLEN / rate;
-    double step = TWO_PI / LFO_TABLEN;
-
-    int i;
-    for (i = 0 ; i < LFO_TABLEN ; ++i) {
-        self->lfo_table[i] = sin(step * i);
-    }
-
-    // Copy first value to the last entry
-    self->lfo_table[i] = self->lfo_table[0];
-
     self->mod_offset_samples = ceil(MOD_OFFSET_MS / 1000 * rate);
+
+    // LFO
+    self->lfo_circle = TWO_PI/(float)rate;
 
     // limiter
     self->lim_attack  = powf(0.01f, 1.0f / (LIM_ATTACK * rate * 0.001f) ); 
@@ -389,7 +377,7 @@ static void activate(LV2_Handle instance) {
     self->cur_cf = 0;
     self->cur_fb = 0;
     self->cur_tempo = 0;
-    self->lfo_cur_phase = 0;
+    self->lfo_curphase = 0.0f;
     self->lfo_incr = 0;
     self->cur_gain_buf_in = 0;
     self->tgt_d_t_ch1 = 0.5f * self->sample_rate;
@@ -503,9 +491,8 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
     float cp_trails = *self->cp_trails;
     int32_t fade_pos = self->fade_pos;
     int32_t fade_length = self->fade_length;
-    double lfo_circle = self->lfo_circle;
-    double lfo_cur_phase = self->lfo_cur_phase;
-    double lfo_incr = self->lfo_incr;
+    float lfo_curphase = self->lfo_curphase;
+    float lfo_incr = self->lfo_incr;
     int32_t pos_w = self->pos_w;
     double rate = self->sample_rate;
     BollieState state = self->state;
@@ -515,7 +502,6 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
     float tgt_gain_wet = self->tgt_gain_wet;
     float tgt_cf = self->tgt_cf;
     float tgt_fb = self->tgt_fb;
-    const double *lfo_table = self->lfo_table;
 
     float lim_attack = self->lim_attack;
     float lim_release = self->lim_release;
@@ -617,7 +603,7 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
     if (cp_mod_depth < 0.1f || cp_mod_depth > MOD_OFFSET_MS)
         cp_mod_depth = 2.f;
 
-    if (cp_mod_rate < 0.1f || cp_mod_depth > 5.f)
+    if (cp_mod_rate < 0.1f || cp_mod_rate > 2.f)
         cp_mod_rate = 0.1f;
 
     // User disabled the plugin, fade out
@@ -638,8 +624,6 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
             }
             else {
                 pos_w = 0;
-                memset(self->buffer_ch1, 0, MAX_BUF_SIZE * sizeof(float));
-                memset(self->buffer_ch2, 0, MAX_BUF_SIZE * sizeof(float));
                 state = FILL_BUF;
             }
         }
@@ -661,32 +645,24 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
         float lfo_offset_ch1 = 0;
         float lfo_offset_ch2 = 0;
         if (cur_mod_depth > 0) {
-            // Here we do a table lookup and linear interpolation
-            double x1;
-            double frac = modf(lfo_cur_phase, &x1);
-            int32_t x2 = x1+1;
-            double a1 = lfo_table[(int32_t)x1];
-            double a2 = lfo_table[(int32_t)x2];
-            if (cur_mod_rate != cp_mod_rate) {
+            float lfo_coeff = (float)sin(lfo_curphase);
+            if (cp_mod_rate != cur_mod_rate) {
                 cur_mod_rate = cp_mod_rate;
-                lfo_incr = lfo_circle * cur_mod_rate;
+                lfo_incr = self->lfo_circle * cur_mod_rate;
             }
-            float lfo_coeff = a1 + frac * (a2-a1);
-
-            if (lfo_coeff > 1.0f || lfo_coeff < -1.0f || x1 >= LFO_TABLEN ||
-                x1 < 0) {
-                printf("lfo_coeff %.02f x1 %.02f\n", lfo_coeff, x1);
-            }
-
-            lfo_cur_phase += lfo_incr;
+            lfo_curphase += lfo_incr;
 
             // A chance to do desired phase switching
-            if (lfo_cur_phase >= LFO_TABLEN || lfo_cur_phase < 0.0f) {
-                cur_mod_phase = cp_mod_phase;    
+            if (lfo_curphase >= TWO_PI) {
+                cur_mod_phase = cp_mod_phase;
+                lfo_curphase -= TWO_PI;
+            }
+            else if (lfo_curphase < 0.0f) {
+                cur_mod_phase = cp_mod_phase;
+                lfo_curphase += TWO_PI;
             }
 
-            while (lfo_cur_phase >= LFO_TABLEN) lfo_cur_phase -= LFO_TABLEN;
-            while (lfo_cur_phase < 0.0f) lfo_cur_phase += LFO_TABLEN;
+            // Calculate offset for ch1
             lfo_offset_ch1 = (cur_mod_depth / 1000 * rate) * lfo_coeff;
 
             // In case the user desires a phase switch, then turn the ch2 by
@@ -695,7 +671,7 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
                 cur_mod_phase ? lfo_offset_ch1 * -1 : lfo_offset_ch1;
         }
         else {
-            lfo_cur_phase = 0;
+            lfo_curphase = 0.0f;
         }
 
         // Store old samples here
@@ -842,7 +818,7 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
     self->cur_mod_rate = cur_mod_rate;
     self->cur_mod_phase = cur_mod_phase;
     self->fade_pos = fade_pos;
-    self->lfo_cur_phase = lfo_cur_phase;
+    self->lfo_curphase = lfo_curphase;
     self->lfo_incr = lfo_incr;
     self->pos_w = pos_w;
     self->state = state;
