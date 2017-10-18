@@ -36,7 +36,7 @@
 
 // Max buffer size == 192k * 10 seconds (max delay time) + a bit for modulation
 #define TWO_PI (M_PI*2)
-#define MAX_BUF_SIZE 1930000
+#define MAX_BUF_SIZE 769000
 #define FADE_LENGTH_MS 50
 #define MOD_OFFSET_MS 5.f
 #define LIM_ATTACK 10.f
@@ -433,16 +433,16 @@ static float calc_delay_samples(BollieDelayXT* self, float tempo, int div) {
 /**
 * linear sample interpolation from buffer
 * \param buf pointer to the buffer
-* \param pos position to retrieve
+* \param x sample coordinate. Can be also negative.
 * \return interpolated sample
 */
-static float interpolate(float *buf, float pos) {
-    double x1, frac;
-    frac = modf(pos, &x1);
-    int32_t x2 = (int32_t)x1+1;
-    float a1 = buf[(int32_t)x1];
-    float a2 = buf[x2 >= MAX_BUF_SIZE ? 0 : x2];
-    return a1  + frac * (a2-a1);
+static float interpolate(float *buf, double x) {
+    if (x < 0) x += MAX_BUF_SIZE;
+    if (x >= MAX_BUF_SIZE) x -= MAX_BUF_SIZE;
+    int32_t x0 = (int32_t)x;
+    float frac = x - (double)x0;
+    int32_t x1 = x0+1;
+    return buf[x0]  + frac * (buf[x1 >= MAX_BUF_SIZE ? 0 : x1] - buf[x0]);
 }
 
 
@@ -714,13 +714,11 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
         // In this states, we'll retrieve old samples, interpolate if needed
         if (state == FADE_IN || state == FADE_OUT || state == CYCLE) {
             // Channel 1
-            float x = (float)pos_w - cur_d_t_ch1 + lfo_offset_ch1; 
-            if (x < 0) x = MAX_BUF_SIZE + x;
+            double x = (double)pos_w - cur_d_t_ch1 + lfo_offset_ch1; 
             old_s_ch1 = interpolate(self->buffer_ch1, x) * fade_coeff;
 
             // Channel 2
-            x = (float)pos_w - cur_d_t_ch2 + lfo_offset_ch2; 
-            if (x < 0) x = MAX_BUF_SIZE + x;
+            x = (double)pos_w - cur_d_t_ch2 + lfo_offset_ch2; 
             old_s_ch2 = interpolate(self->buffer_ch2, x) * fade_coeff;
 
             if (x >= MAX_BUF_SIZE || x < 0) 
