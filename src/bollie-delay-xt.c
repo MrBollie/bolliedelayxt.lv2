@@ -40,6 +40,8 @@
 #define FADE_LENGTH_MS 50
 #define LFO_TABLEN (1024)
 #define MOD_OFFSET_MS 5.f
+#define LIM_ATTACK 10.f
+#define LIM_RELEASE 10.f
 
 /**
 * Make a bool type available. ;)
@@ -205,6 +207,11 @@ typedef struct {
     float tgt_gain_wet;
 
     double lfo_table[LFO_TABLEN + 1];
+
+    float lim_attack;
+    float lim_release;
+    float lim_envelope_ch1;
+    float lim_envelope_ch2;
     
 } BollieDelayXT;
 
@@ -239,6 +246,10 @@ static LV2_Handle instantiate(const LV2_Descriptor * descriptor, double rate,
     self->lfo_table[i] = self->lfo_table[0];
 
     self->mod_offset_samples = ceil(MOD_OFFSET_MS / 1000 * rate);
+
+    // limiter
+    self->lim_attack  = powf(0.01f, 1.0f / (LIM_ATTACK * rate * 0.001f) ); 
+    self->lim_release = powf(0.01f, 1.0f / (LIM_RELEASE * rate * 0.001f) );
 
     return (LV2_Handle)self;
 }
@@ -386,6 +397,9 @@ static void activate(LV2_Handle instance) {
     self->tgt_d_t_ch2 = 0.5f * self->sample_rate;
     self->cur_d_t_ch2 = 0;
 
+    self->lim_envelope_ch1 = 0;
+    self->lim_envelope_ch2 = 0;
+
     bf_init(&self->fil_hcf_fb_ch1);
     bf_init(&self->fil_hcf_fb_ch2);
     bf_init(&self->fil_lcf_fb_ch1);
@@ -502,6 +516,11 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
     float tgt_cf = self->tgt_cf;
     float tgt_fb = self->tgt_fb;
     const double *lfo_table = self->lfo_table;
+
+    float lim_attack = self->lim_attack;
+    float lim_release = self->lim_release;
+    float lim_envelope_ch1 = self->lim_envelope_ch1;
+    float lim_envelope_ch2 = self->lim_envelope_ch2;
 
     // Tempo handling
     // Tempo mode has changed
@@ -754,38 +773,54 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
         float cur_fil_s_ch1 = cur_s_ch1; // current filtered sample
         float cur_fil_s_ch2 = cur_s_ch2;
         if (cp_hcf_pre_on) {
-            cur_fil_s_ch1 = bf_hcf(cur_fil_s_ch1, cp_hcf_pre_freq, cp_hcf_pre_q, 
+            cur_fil_s_ch1 = bf_hcf(cur_fil_s_ch1, cp_hcf_pre_freq, cp_hcf_pre_q,
                 rate, &self->fil_hcf_pre_ch1);
-            cur_fil_s_ch2 = bf_hcf(cur_fil_s_ch2, cp_hcf_pre_freq, cp_hcf_pre_q, 
+            cur_fil_s_ch2 = bf_hcf(cur_fil_s_ch2, cp_hcf_pre_freq, cp_hcf_pre_q,
                 rate, &self->fil_hcf_pre_ch2);
         }
 
         if (cp_lcf_pre_on) {
-            cur_fil_s_ch1 = bf_lcf(cur_fil_s_ch1, cp_lcf_pre_freq, cp_lcf_pre_q, 
+            cur_fil_s_ch1 = bf_lcf(cur_fil_s_ch1, cp_lcf_pre_freq, cp_lcf_pre_q,
                 rate, &self->fil_lcf_pre_ch1);
-            cur_fil_s_ch2 = bf_lcf(cur_fil_s_ch2, cp_lcf_pre_freq, cp_lcf_pre_q, 
+            cur_fil_s_ch2 = bf_lcf(cur_fil_s_ch2, cp_lcf_pre_freq, cp_lcf_pre_q,
                 rate, &self->fil_lcf_pre_ch2);
         }
 
         /* Summing for the delay lines */
+        float to_buf_ch1 = 0;
+        float to_buf_ch2 = 0;
         if (cp_ping_pong) {
-            self->buffer_ch1[pos_w] = cur_gain_buf_in 
+            to_buf_ch1 = cur_gain_buf_in 
                 * (cur_fil_s_ch1 * 0.5f + cur_fil_s_ch2 * 0.5f)
                 + old_s_ch2 * cur_cf
             ;
-            self->buffer_ch2[pos_w] = old_s_ch1 * cur_cf;
+            to_buf_ch2 = old_s_ch1 * cur_cf;
         }
         else {
-            self->buffer_ch1[pos_w] = cur_gain_buf_in * cur_fil_s_ch1 
+            to_buf_ch1 = cur_gain_buf_in * cur_fil_s_ch1 
                 + old_s_ch1 * cur_fb
                 + old_s_ch2 * cur_cf
             ;
 
-            self->buffer_ch2[pos_w] = cur_gain_buf_in * cur_fil_s_ch2
+            to_buf_ch2 = cur_gain_buf_in * cur_fil_s_ch2
                 + old_s_ch2 * cur_fb
                 + old_s_ch1 * cur_cf
             ;
         }
+
+        // Limiter
+        float v = fabs(to_buf_ch1);
+        lim_envelope_ch1 = (v > lim_envelope_ch1 ? lim_attack : lim_release)
+            * (lim_envelope_ch1 - v) + v;
+        if (lim_envelope_ch1 > 1.f) to_buf_ch1 /= lim_envelope_ch1;
+
+        v = fabs(to_buf_ch2);
+        lim_envelope_ch2 = (v > lim_envelope_ch2 ? lim_attack : lim_release)
+            * (lim_envelope_ch2 - v) + v;
+        if (lim_envelope_ch1 > 1.f) to_buf_ch2 /= lim_envelope_ch2;
+
+        self->buffer_ch1[pos_w] = to_buf_ch1;
+        self->buffer_ch2[pos_w] = to_buf_ch2;
 
         // Final summing
         self->output_ch1[i] = cur_s_ch1 * cur_gain_dry 
@@ -793,7 +828,7 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
         self->output_ch2[i] = cur_s_ch2 * cur_gain_dry 
             + old_s_ch2 * cur_gain_wet;
 
-        pos_w = pos_w + 1 >= MAX_BUF_SIZE ? 0 : pos_w + 1;        
+        pos_w = pos_w + 1 >= MAX_BUF_SIZE ? 0 : pos_w + 1;
     }
 
     self->cur_d_t_ch1 = cur_d_t_ch1;
@@ -817,6 +852,8 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
     self->tgt_gain_wet = tgt_gain_wet;
     self->tgt_cf = tgt_cf;
     self->tgt_fb = tgt_fb;
+    self->lim_envelope_ch1 = lim_envelope_ch1;
+    self->lim_envelope_ch2 = lim_envelope_ch2;
 }
 
 
