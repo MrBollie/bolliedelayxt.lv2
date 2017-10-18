@@ -721,9 +721,6 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
             x = (double)pos_w - cur_d_t_ch2 + lfo_offset_ch2; 
             old_s_ch2 = interpolate(self->buffer_ch2, x) * fade_coeff;
 
-            if (x >= MAX_BUF_SIZE || x < 0) 
-                *self->cp_tempo_out = x;
-
             // High cut filter on feedback
             if (cp_hcf_fb_on) {
                 old_s_ch1 = bf_hcf(old_s_ch1, cp_hcf_fb_freq, cp_hcf_fb_q, rate,
