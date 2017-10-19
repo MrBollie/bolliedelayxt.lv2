@@ -139,6 +139,12 @@
     color: #000000;
 }
 
+.bolliedelay .bollie-group .mod-knob > span.mod-knob-title.bright {
+    text-align: center;
+    color: #cecece;
+    text-shadow: 1px 1px 1px rgba(0,0,0,15);
+}
+
 .bolliedelay .bollie-group .mod-knob .mod-knob-value {
     bottom:0px;
     font-size:11px;
