@@ -454,7 +454,7 @@ static float interpolate(float *buf, double x) {
 static void run(LV2_Handle instance, uint32_t n_samples) {
     BollieDelayXT* self = (BollieDelayXT*)instance;
 
-    // Localize
+    // Copy variables from heap to stack to speed up looping over the samples
     float cur_cf = self->cur_cf;
     float cur_fb = self->cur_fb;
     float cur_d_t_ch1 = self->cur_d_t_ch1;
@@ -721,6 +721,18 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
             x = (double)pos_w - cur_d_t_ch2 + lfo_offset_ch2; 
             old_s_ch2 = interpolate(self->buffer_ch2, x) * fade_coeff;
 
+            /* Limiting happening after retrieval from buffer to safe from
+            modulation going bonkers */
+            float v = fabs(old_s_ch1);
+            lim_envelope_ch1 = (v > lim_envelope_ch1 ? lim_attack : lim_release)
+                * (lim_envelope_ch1 - v) + v;
+            if (lim_envelope_ch1 > 1.f) old_s_ch1 /= lim_envelope_ch1;
+
+            v = fabs(old_s_ch2);
+            lim_envelope_ch2 = (v > lim_envelope_ch2 ? lim_attack : lim_release)
+                * (lim_envelope_ch2 - v) + v;
+            if (lim_envelope_ch1 > 1.f) old_s_ch2 /= lim_envelope_ch2;
+
             // High cut filter on feedback
             if (cp_hcf_fb_on) {
                 old_s_ch1 = bf_hcf(old_s_ch1, cp_hcf_fb_freq, cp_hcf_fb_q, rate,
@@ -756,40 +768,28 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
         }
 
         /* Summing for the delay lines */
-        float to_buf_ch1 = 0;
-        float to_buf_ch2 = 0;
         if (cp_ping_pong) {
-            to_buf_ch1 = cur_gain_buf_in 
+            /* In ping pong mode, we sum both input channels with -6 dBFS
+            and send them solely to the buffer for the first channel.
+            cur_cf-coeff takes care of the spill-over*/
+            self->buffer_ch1[pos_w] = cur_gain_buf_in 
                 * (cur_fil_s_ch1 * 0.5f + cur_fil_s_ch2 * 0.5f)
                 + old_s_ch2 * cur_cf
             ;
-            to_buf_ch2 = old_s_ch1 * cur_cf;
+            self->buffer_ch2[pos_w] = old_s_ch1 * cur_cf;
         }
         else {
-            to_buf_ch1 = cur_gain_buf_in * cur_fil_s_ch1 
+            // Normal mode
+            self->buffer_ch1[pos_w] = cur_gain_buf_in * cur_fil_s_ch1 
                 + old_s_ch1 * cur_fb
                 + old_s_ch2 * cur_cf
             ;
 
-            to_buf_ch2 = cur_gain_buf_in * cur_fil_s_ch2
+            self->buffer_ch2[pos_w] = cur_gain_buf_in * cur_fil_s_ch2
                 + old_s_ch2 * cur_fb
                 + old_s_ch1 * cur_cf
             ;
         }
-
-        // Limiter
-        float v = fabs(to_buf_ch1);
-        lim_envelope_ch1 = (v > lim_envelope_ch1 ? lim_attack : lim_release)
-            * (lim_envelope_ch1 - v) + v;
-        if (lim_envelope_ch1 > 1.f) to_buf_ch1 /= lim_envelope_ch1;
-
-        v = fabs(to_buf_ch2);
-        lim_envelope_ch2 = (v > lim_envelope_ch2 ? lim_attack : lim_release)
-            * (lim_envelope_ch2 - v) + v;
-        if (lim_envelope_ch1 > 1.f) to_buf_ch2 /= lim_envelope_ch2;
-
-        self->buffer_ch1[pos_w] = to_buf_ch1;
-        self->buffer_ch2[pos_w] = to_buf_ch2;
 
         // Final summing
         self->output_ch1[i] = cur_s_ch1 * cur_gain_dry 
@@ -797,9 +797,11 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
         self->output_ch2[i] = cur_s_ch2 * cur_gain_dry 
             + old_s_ch2 * cur_gain_wet;
 
+        // Increase write index, wrap around if needed
         pos_w = pos_w + 1 >= MAX_BUF_SIZE ? 0 : pos_w + 1;
     }
 
+    // Copy state variables back to heap for next run
     self->cur_d_t_ch1 = cur_d_t_ch1;
     self->cur_d_t_ch2 = cur_d_t_ch2;
     self->cur_fb = cur_fb;
