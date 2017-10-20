@@ -4,7 +4,7 @@
 
 /* = CONTAINER
 ================================================ */
-.bolliedelay {
+.bolliedelayxt {
     background-image:url(/resources/background.png{{{ns}}});
     background-position:center center;
     background-repeat:no-repeat;
@@ -19,7 +19,7 @@
 /* = Labels
 ================================================ */
 
-.bolliedelay .bollie-plugin-name {
+.bolliedelayxt .bollie-plugin-name {
     overflow:hidden;
     position:absolute;
     right:20px;
@@ -28,7 +28,7 @@
     text-transform:uppercase;
 }
 
-.bolliedelay .bollie-plugin-name h1 {
+.bolliedelayxt .bollie-plugin-name h1 {
     font-family:"cooper hewitt", Sans-serif !important;
     font-weight: bold;
     font-size:30px;
@@ -36,7 +36,7 @@
     line-height:1;
 }
 
-.bolliedelay .bollie-label {
+.bolliedelayxt .bollie-label {
     text-transform:uppercase;
     font-size:11px;
     font-weight:bold;
@@ -47,7 +47,7 @@
 
 /* = LIGHT ON/OFF
 ================================================ */
-.bolliedelay .mod-light {
+.bolliedelayxt .mod-light {
     background-position:center center;
     background-repeat:no-repeat;
     bottom:35px;
@@ -59,7 +59,7 @@
 
 /* = Toggle
 ================================================ */
-.bolliedelay .mod-toggle {
+.bolliedelayxt .mod-toggle {
     background-image:url(/resources/toggle.png{{{ns}}});
     background-position:bottom center;
     background-repeat:no-repeat;
@@ -70,11 +70,11 @@
     margin: 4px auto 0 auto;
 }
 
-.bolliedelay .mod-toggle.on {
+.bolliedelayxt .mod-toggle.on {
     background-position: top center !important;
 }
 
-.bolliedelay .mod-toggle.bypass {
+.bolliedelayxt .mod-toggle.bypass {
     background-image:url(/resources/toggle.png{{{ns}}});
     background-position:bottom center;
     background-repeat:no-repeat;
@@ -92,7 +92,7 @@
 
 /* = KNOBS
 ================================================ */
-.bolliedelay .bollie-group {
+.bolliedelayxt .bollie-group {
     margin:5px 0px 0px 5px !important;
     position:relative;
     text-align:left;
@@ -106,7 +106,7 @@
     text-align: center;
 }
 
-.bolliedelay .bollie-group.double {
+.bolliedelayxt .bollie-group.double {
     margin:5px 0px 0px 5px !important;
     position:relative;
     text-align:left;
@@ -120,7 +120,7 @@
     text-align: center;
 }
 
-.bolliedelay .bollie-group .mod-knob > span.mod-knob-title {
+.bolliedelayxt .bollie-group .mod-knob > span.mod-knob-title {
     bottom:14px;
     cursor:default;
     display:block;
@@ -139,13 +139,13 @@
     color: #000000;
 }
 
-.bolliedelay .bollie-group .mod-knob > span.mod-knob-title.bright {
+.bolliedelayxt .bollie-group .mod-knob > span.mod-knob-title.bright {
     text-align: center;
     color: #cecece;
     text-shadow: 1px 1px 1px rgba(0,0,0,15);
 }
 
-.bolliedelay .bollie-group .mod-knob .mod-knob-value {
+.bolliedelayxt .bollie-group .mod-knob .mod-knob-value {
     bottom:0px;
     font-size:11px;
     left:0;
@@ -159,7 +159,7 @@
     text-align: right;
 }
 
-.bolliedelay .bollie-group .mod-knob .bollie-value{
+.bolliedelayxt .bollie-group .mod-knob .bollie-value{
     font-size:11px;
     left:0;
     line-height:1;
@@ -173,7 +173,7 @@
     text-align: center;
 }
 
-.bolliedelay .bollie-group .mod-knob .mod-knob-image {
+.bolliedelayxt .bollie-group .mod-knob .mod-knob-image {
     background-image:url(/resources/aluminium.png{{{ns}}});
     background-repeat:no-repeat;
     background-size:auto 60px;
@@ -182,7 +182,7 @@
     margin:0 auto;
 }
 
-.bolliedelay .bollie-group .mod-knob {
+.bolliedelayxt .bollie-group .mod-knob {
     display:inline-block;
     height:88px;
     width:70px;
@@ -191,7 +191,7 @@
     position:relative;
 }
 
-.bolliedelay .bollie-group .mod-knob.bpm {
+.bolliedelayxt .bollie-group .mod-knob.bpm {
     display:inline-block;
     height:88px;
     width:200px;
@@ -201,7 +201,7 @@
     text-align: center;
 }
 
-.bolliedelay .bollie-group .mod-knob.bpm > span.mod-knob-title {
+.bolliedelayxt .bollie-group .mod-knob.bpm > span.mod-knob-title {
     bottom:0px;
     cursor:default;
     display:block;
@@ -220,7 +220,7 @@
     color: #000000;
 }
 
-.bolliedelay .bollie-group .mod-knob.bpm .bollie-value{
+.bolliedelayxt .bollie-group .mod-knob.bpm .bollie-value{
     font-size:30px;
     left:0;
     line-height:1;
@@ -237,7 +237,7 @@
 /* = ENUMERATED LIST
 ================================================ */
 
-.bolliedelay .mod-enumerated {
+.bolliedelayxt .mod-enumerated {
     background-image:url(/resources/dropdown-arrow-black.png{{{ns}}});
     background-position:right center;
     background-repeat:no-repeat;
@@ -251,11 +251,11 @@
     text-align:center;
 }
 
-.bolliedelay .mod-enumerated .mod-enumerated-selected {
+.bolliedelayxt .mod-enumerated .mod-enumerated-selected {
     padding:3px 9px;
 }
 
-.bolliedelay .mod-enumerated .mod-enumerated-list {
+.bolliedelayxt .mod-enumerated .mod-enumerated-list {
     background-color:rgba(0,0,0,.9);
     color:#fff;
     display:none;
@@ -264,11 +264,11 @@
     position:relative;
 }
 
-.bolliedelay .mod-enumerated .mod-enumerated-list > div {
+.bolliedelayxt .mod-enumerated .mod-enumerated-list > div {
     padding:3px 9px;
 }
 
-.bolliedelay .mod-enumerated .mod-enumerated-list > div:hover {
+.bolliedelayxt .mod-enumerated .mod-enumerated-list > div:hover {
     background-color:rgba(255,255,255,.2);
     cursor:pointer;
 }
