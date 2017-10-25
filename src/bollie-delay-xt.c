@@ -444,6 +444,15 @@ static float calc_delay_samples(BollieDelayXT* self, float tempo, int div) {
         case 11: // 1/16.
             d = d / 4 * 3;
             break;
+        case 12: // 1/32
+            d = d / 8;
+            break;
+        case 13: // 1/32T
+            d = d / 16;
+            break;
+        case 14: // 1/16.
+            d = d / 8 * 3;
+            break;
     }
     return d;
 }
