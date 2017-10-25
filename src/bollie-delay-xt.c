@@ -411,20 +411,38 @@ static float calc_delay_samples(BollieDelayXT* self, float tempo, int div) {
     // Calculate the samples needed 
     float d = 60 / tempo * self->sample_rate;
     switch(div) {
-        case 1:
+        case 0: // 1/2
+            d = d * 2;
+            break;
+        case 1: // 1/2T
+            d = d * 4/3;
+            break;
+        case 2: // 1/2.
+            d = d * 3;
+            break;
+        case 4: // 1/4T
             d = d * 2/3;
             break;
-        case 2:
+        case 5: // 1/4.
+            d = d * 1.5f;
+            break;
+        case 6: // 1/8
             d = d / 2;
             break;
-        case 3:
-            d = d / 4 * 3;
+        case 7: // 1/8T
+            d = d * 1/3;
             break;
-        case 4:
-            d = d / 3;
+        case 8: // 1/8.
+            d = d / 2 * 3;
             break;
-        case 5:
+        case 9: // 1/16
             d = d / 4;
+            break;
+        case 10: // 1/16T
+            d = d / 6;
+            break;
+        case 11: // 1/16.
+            d = d / 4 * 3;
             break;
     }
     return d;

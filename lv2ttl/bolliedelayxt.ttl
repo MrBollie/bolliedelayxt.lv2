@@ -123,34 +123,58 @@
         lv2:index 10 ;
         lv2:symbol "CP_TEMPO_DIV_CH1" ;
         lv2:name "Div. Ch. 1" ;
-        lv2:default 0 ;
+        lv2:default 3 ;
         lv2:minimum 0 ;
-        lv2:maximum 5 ;
+        lv2:maximum 11 ;
         lv2:portProperty lv2:enumeration, lv2:integer ;
         lv2:scalePoint [
             rdf:value 0 ;
-            rdfs:label "1/4" ;
-            rdfs:comment "Simple quarter notes." ;
+            rdfs:label "1/2" ;
+            rdfs:comment "Half notes" ;
         ], [
             rdf:value 1 ;
-            rdfs:label "1/4T" ;
-            rdfs:comment "Triplet quarter notes." ;
+            rdfs:label "1/2T" ;
+            rdfs:comment "Triplet half notes" ;
         ], [
             rdf:value 2 ;
-            rdfs:label "1/8" ;
-            rdfs:comment "Simple eighth notes." ;
+            rdfs:label "1/2." ;
+            rdfs:comment "Dotted half notes" ;
         ], [
             rdf:value 3 ;
-            rdfs:label "1/8." ;
-            rdfs:comment "Dotted eighth notes." ;
+            rdfs:label "1/4" ;
+            rdfs:comment "Quarter notes" ;
         ], [
             rdf:value 4 ;
-            rdfs:label "1/8T" ;
-            rdfs:comment "Triplet eighth notes." ;
+            rdfs:label "1/4T" ;
+            rdfs:comment "Triplet quarter notes" ;
         ], [
             rdf:value 5 ;
+            rdfs:label "1/4." ;
+            rdfs:comment "Dotted quarter notes" ;
+        ], [
+            rdf:value 6 ;
+            rdfs:label "1/8" ;
+            rdfs:comment "Eighth notes" ;
+        ], [
+            rdf:value 7 ;
+            rdfs:label "1/8T" ;
+            rdfs:comment "Triplet eighth notes" ;
+        ], [
+            rdf:value 8 ;
+            rdfs:label "1/8." ;
+            rdfs:comment "Dotted eighth notes" ;
+        ], [
+            rdf:value 9 ;
             rdfs:label "1/16" ;
-            rdfs:comment "Sixteenth notes." ;
+            rdfs:comment "Sixteenth notes" ;
+        ], [
+            rdf:value 10 ;
+            rdfs:label "1/16T" ;
+            rdfs:comment "Triplet sixteenth notes" ;
+        ], [
+            rdf:value 11 ;
+            rdfs:label "1/16." ;
+            rdfs:comment "Dotted sixteenth notes" ;
         ];
     ] , [
         a lv2:InputPort ,
@@ -158,34 +182,58 @@
         lv2:index 11 ;
         lv2:symbol "CP_TEMPO_DIV_CH2" ;
         lv2:name "Div. Ch. 2" ;
-        lv2:default 0 ;
+        lv2:default 3 ;
         lv2:minimum 0 ;
-        lv2:maximum 5 ;
+        lv2:maximum 11 ;
         lv2:portProperty lv2:enumeration, lv2:integer;
         lv2:scalePoint [
             rdf:value 0 ;
-            rdfs:label "1/4" ;
-            rdfs:comment "Simple quarter notes." ;
+            rdfs:label "1/2" ;
+            rdfs:comment "Half notes" ;
         ], [
             rdf:value 1 ;
-            rdfs:label "1/4T" ;
-            rdfs:comment "Triplet quarter notes." ;
+            rdfs:label "1/2T" ;
+            rdfs:comment "Triplet half notes" ;
         ], [
             rdf:value 2 ;
-            rdfs:label "1/8" ;
-            rdfs:comment "Simple eighth notes." ;
+            rdfs:label "1/2." ;
+            rdfs:comment "Dotted half notes" ;
         ], [
             rdf:value 3 ;
-            rdfs:label "1/8." ;
-            rdfs:comment "Dotted eighth notes." ;
+            rdfs:label "1/4" ;
+            rdfs:comment "Quarter notes" ;
         ], [
             rdf:value 4 ;
-            rdfs:label "1/8T" ;
-            rdfs:comment "Triplet eighth notes." ;
+            rdfs:label "1/4T" ;
+            rdfs:comment "Triplet quarter notes" ;
         ], [
             rdf:value 5 ;
+            rdfs:label "1/4." ;
+            rdfs:comment "Dotted quarter notes" ;
+        ], [
+            rdf:value 6 ;
+            rdfs:label "1/8" ;
+            rdfs:comment "Eighth notes" ;
+        ], [
+            rdf:value 7 ;
+            rdfs:label "1/8T" ;
+            rdfs:comment "Triplet eighth notes" ;
+        ], [
+            rdf:value 8 ;
+            rdfs:label "1/8." ;
+            rdfs:comment "Dotted eighth notes" ;
+        ], [
+            rdf:value 9 ;
             rdfs:label "1/16" ;
-            rdfs:comment "Sixteenth notes." ;
+            rdfs:comment "Sixteenth notes" ;
+        ], [
+            rdf:value 10 ;
+            rdfs:label "1/16T" ;
+            rdfs:comment "Triplet sixteenth notes" ;
+        ], [
+            rdf:value 11 ;
+            rdfs:label "1/16." ;
+            rdfs:comment "Dotted sixteenth notes" ;
         ];
     ] , [
         a lv2:InputPort ,
