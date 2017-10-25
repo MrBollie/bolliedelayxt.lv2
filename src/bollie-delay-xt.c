@@ -424,7 +424,7 @@ static float calc_delay_samples(BollieDelayXT* self, float tempo, int div) {
             d = d * 2/3;
             break;
         case 5: // 1/4.
-            d = d * 1.5f;
+            d = d / 2 * 3;
             break;
         case 6: // 1/8
             d = d / 2;
@@ -433,25 +433,25 @@ static float calc_delay_samples(BollieDelayXT* self, float tempo, int div) {
             d = d * 1/3;
             break;
         case 8: // 1/8.
-            d = d / 2 * 3;
+            d = d / 4 * 3;
             break;
         case 9: // 1/16
             d = d / 4;
             break;
         case 10: // 1/16T
-            d = d / 6;
+            d = d / 2/3;
             break;
         case 11: // 1/16.
-            d = d / 4 * 3;
+            d = d / 8 * 3;
             break;
         case 12: // 1/32
             d = d / 8;
             break;
         case 13: // 1/32T
-            d = d / 16;
+            d = d / 4/3;
             break;
-        case 14: // 1/16.
-            d = d / 8 * 3;
+        case 14: // 1/32.
+            d = d / 16 * 3;
             break;
     }
     return d;
@@ -625,7 +625,7 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
     if (cp_mod_depth < 0.1f || cp_mod_depth > MOD_OFFSET_MS)
         cp_mod_depth = 2.f;
 
-    if (cp_mod_rate < 0.1f || cp_mod_rate > 2.f)
+    if (cp_mod_rate < 0.1f || cp_mod_rate > 3.f)
         cp_mod_rate = 0.1f;
 
     // User disabled the plugin, fade out
