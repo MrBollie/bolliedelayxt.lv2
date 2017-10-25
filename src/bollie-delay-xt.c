@@ -367,8 +367,8 @@ static void activate(LV2_Handle instance) {
     self->fade_pos = 0;
     self->cur_cp_gain_dry = -97.f;
     self->cur_cp_gain_wet = -97.f;
-    self->cur_cp_cf = -97;
-    self->cur_cp_fb = -97;
+    self->cur_cp_cf = 0;
+    self->cur_cp_fb = 0;
     self->cur_gain_dry = 0;
     self->cur_gain_wet = 0;
     self->cur_mod_depth = 0;
@@ -563,14 +563,14 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
     // Feedback
     if (!cp_ping_pong) {
         if (*self->cp_fb != self->cur_cp_fb) {
-            if (*self->cp_fb > 12.f ) {
-                tgt_fb = 4.f;
+            if (*self->cp_fb > 99.f ) {
+                tgt_fb = 1.f;
             }
-            else if (*self->cp_fb < -96.f) {
+            else if (*self->cp_fb < 0) {
                 tgt_fb = 0;
             }
             else {
-                tgt_fb = powf(10, (*self->cp_fb/20));
+                tgt_fb = *self->cp_fb / 100;
             }
             self->cur_cp_fb = *self->cp_fb;
         }
@@ -582,14 +582,14 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
     
     // Crossfeed
     if (*self->cp_cf != self->cur_cp_cf) {
-        if (*self->cp_cf > 12.f) {
-            tgt_cf = 4.f;
+        if (*self->cp_cf > 99.f) {
+            tgt_cf = 1.f;
         }
-        else if (*self->cp_cf < -96.f) {
+        else if (*self->cp_cf < 0) {
             tgt_cf = 0;
         }
         else {
-            tgt_cf = powf(10, (*self->cp_cf/20));
+            tgt_cf = *self->cp_cf / 100;
         }
         self->cur_cp_cf = *self->cp_cf;
     } 
