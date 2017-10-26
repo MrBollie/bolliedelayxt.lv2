@@ -39,8 +39,8 @@
 #define MAX_BUF_SIZE 769000
 #define FADE_LENGTH_MS 50
 #define MOD_OFFSET_MS 5.f
-#define LIM_ATTACK 10.f
-#define LIM_RELEASE 10.f
+#define LIM_ATTACK 5.f
+#define LIM_RELEASE 100.f
 
 /**
 * Make a bool type available. ;)
@@ -748,18 +748,6 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
             x = (double)pos_w - cur_d_t_ch2 + lfo_offset_ch2; 
             old_s_ch2 = interpolate(self->buffer_ch2, x) * fade_coeff;
 
-            /* Limiting happening after retrieval from buffer to safe from
-            modulation going bonkers */
-            float v = fabs(old_s_ch1);
-            lim_envelope_ch1 = (v > lim_envelope_ch1 ? lim_attack : lim_release)
-                * (lim_envelope_ch1 - v) + v;
-            if (lim_envelope_ch1 > 1.f) old_s_ch1 /= lim_envelope_ch1;
-
-            v = fabs(old_s_ch2);
-            lim_envelope_ch2 = (v > lim_envelope_ch2 ? lim_attack : lim_release)
-                * (lim_envelope_ch2 - v) + v;
-            if (lim_envelope_ch1 > 1.f) old_s_ch2 /= lim_envelope_ch2;
-
             // High cut filter on feedback
             if (cp_hcf_fb_on) {
                 old_s_ch1 = bf_hcf(old_s_ch1, cp_hcf_fb_freq, cp_hcf_fb_q, rate,
@@ -775,6 +763,19 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
                 old_s_ch2 = bf_lcf(old_s_ch2, cp_lcf_fb_freq, cp_lcf_fb_q, rate,
                     &self->fil_lcf_fb_ch2);
             }
+
+            /* Limiting happening after retrieval from buffer and filters to 
+            safe from modulation going bonkers */
+            float v = fabs(old_s_ch1);
+            lim_envelope_ch1 = (v > lim_envelope_ch1 ? lim_attack : lim_release)
+                * (lim_envelope_ch1 - v) + v;
+            if (lim_envelope_ch1 > 0.89f) old_s_ch1 /= lim_envelope_ch1;
+
+            v = fabs(old_s_ch2);
+            lim_envelope_ch2 = (v > lim_envelope_ch2 ? lim_attack : lim_release)
+                * (lim_envelope_ch2 - v) + v;
+            if (lim_envelope_ch2 > 0.89f) old_s_ch2 /= lim_envelope_ch2;
+
         }
 
         /* Filtering before feedback loop */
