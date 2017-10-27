@@ -65,17 +65,25 @@ float bf_lcf(const float in, const float freq, const float Q,
 
     // Precalculate if needed.
     if (freq != bf->freq || Q != bf->Q || rate != bf->rate) {
+        if (Q <= 0) {
+            bf->Q = 0.001f;
+        }
+        else if (Q > 1.4f) {
+            bf->Q = 1.4f;
+        }
+        else {
+            bf->Q = Q;
+        }
         bf->freq = freq;
-        bf->Q = Q;
         bf->rate = rate;
-        float w0 = 2 * PI * bf->freq / bf->rate;
-        float alpha = sin(w0) / (2*bf->Q);
-        bf->a0 = 1+alpha;
-        bf->a1 = -2 * cos(w0);
-        bf->a2 = 1-alpha;
-        bf->b0 = (1 + cos(w0)) / 2;
-        bf->b1 = -(1 + cos(w0));
-        bf->b2 = (1 + cos(w0)) / 2; 
+        float w0 = 2.f * PI * bf->freq / bf->rate;
+        float alpha = sin(w0) / (2.f*bf->Q);
+        bf->a0 = 1.f+alpha;
+        bf->a1 = -2.f * cos(w0);
+        bf->a2 = 1.f-alpha;
+        bf->b0 = (1.f + cos(w0)) / 2.f;
+        bf->b1 = -(1.f + cos(w0));
+        bf->b2 = (1.f + cos(w0)) / 2.f; 
     }
 
     // Filter roll
@@ -116,17 +124,25 @@ float bf_hcf(const float in, const float freq, const float Q,
 
     // Precalculate if needed.
     if (freq != bf->freq || Q != bf->Q || rate != bf->rate) {
+        if (Q <= 0) {
+            bf->Q = 0.001f;
+        }
+        else if (Q > 1.4f) {
+            bf->Q = 1.4f;
+        }
+        else {
+            bf->Q = Q;
+        }
         bf->freq = freq;
-        bf->Q = Q;
         bf->rate = rate;
-        float w0 = 2 * PI * bf->freq / bf->rate;
-        float alpha = sin(w0) / (2*bf->Q);
-        bf->a0 = 1+alpha;
-        bf->a1 = -2 * cos(w0);
-        bf->a2 = 1-alpha;
-        bf->b0 = (1 - cos(w0)) / 2;
-        bf->b1 = 1 - cos(w0);
-        bf->b2 = (1 - cos(w0)) / 2; 
+        float w0 = 2.f * PI * bf->freq / bf->rate;
+        float alpha = sin(w0) / (2.f*bf->Q);
+        bf->a0 = 1.f+alpha;
+        bf->a1 = -2.f * cos(w0);
+        bf->a2 = 1.f-alpha;
+        bf->b0 = (1.f - cos(w0)) / 2.f;
+        bf->b1 = 1.f - cos(w0);
+        bf->b2 = (1.f - cos(w0)) / 2.f; 
     }
 
     // Filter roll

@@ -367,9 +367,9 @@
         lv2:index 22 ;
         lv2:symbol "CP_HCF_PRE_Q" ;
         lv2:name "High Cut Pre Q." ;
-        lv2:default 1.0 ;
-        lv2:minimum 0.125 ;
-        lv2:maximum 1.5 ;
+        lv2:default 0.707 ;
+        lv2:minimum 0.001 ;
+        lv2:maximum 1.4 ;
         lv2:portProperty pprop:logarithmic ;
     ] , [
         a lv2:InputPort ,
@@ -398,9 +398,9 @@
         lv2:index 25 ;
         lv2:symbol "CP_LCF_PRE_Q" ;
         lv2:name "Low Cut Pre Q." ;
-        lv2:default 1.0 ;
-        lv2:minimum 0.125 ;
-        lv2:maximum 8.0 ;
+        lv2:default 0.707 ;
+        lv2:minimum 0.001 ;
+        lv2:maximum 1.4 ;
         lv2:portProperty pprop:logarithmic ;
     ] , [
         a lv2:InputPort ,
@@ -429,9 +429,9 @@
         lv2:index 28 ;
         lv2:symbol "CP_HCF_FB_Q" ;
         lv2:name "High Cut Feedback Q." ;
-        lv2:default 1.0 ;
-        lv2:minimum 0.125 ;
-        lv2:maximum 1.5 ;
+        lv2:default 0.707 ;
+        lv2:minimum 0.001 ;
+        lv2:maximum 1.4 ;
         lv2:portProperty pprop:logarithmic ;
     ] , [
         a lv2:InputPort ,
@@ -460,9 +460,9 @@
         lv2:index 31 ;
         lv2:symbol "CP_LCF_FB_Q" ;
         lv2:name "Low Cut Feedback Q." ;
-        lv2:default 1.0 ;
-        lv2:minimum 0.125 ;
-        lv2:maximum 8.0 ;
+        lv2:default 0.707 ;
+        lv2:minimum 0.001 ;
+        lv2:maximum 1.4 ;
         lv2:portProperty pprop:logarithmic ;
     ] , [
         a lv2:OutputPort ,
