@@ -797,11 +797,11 @@ static void run(LV2_Handle instance, uint32_t n_samples) {
 
         /* Summing for the delay lines */
         if (cp_ping_pong) {
-            /* In ping pong mode, we sum both input channels with -6 dBFS
+            /* In ping pong mode, we sum both input channels with -3 dBFS
             and send them solely to the buffer for the first channel.
             cur_cf-coeff takes care of the spill-over*/
             self->buffer_ch1[pos_w] = cur_gain_buf_in 
-                * (cur_fil_s_ch1 * 0.5f + cur_fil_s_ch2 * 0.5f)
+                * (cur_fil_s_ch1 * 0.707f + cur_fil_s_ch2 * 0.707f)
                 + old_s_ch2 * cur_cf
             ;
             self->buffer_ch2[pos_w] = old_s_ch1 * cur_cf;
